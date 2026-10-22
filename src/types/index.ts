@@ -170,6 +170,7 @@ export interface Asset {
   funding_details?: string; // Program / donor / basis funding verification
   acquisition_year?: number | null;
   acquisition_year_unknown?: boolean;
+  catalog_year?: number; // Tahun sensus/registrasi; tidak menggantikan tahun perolehan faktual
   registration_type?: 'INDIVIDUAL' | 'BUNDLE';
   registration_status?: 'DRAFT' | 'VERIFIED' | 'APPROVED';
   bundle_components?: string;
