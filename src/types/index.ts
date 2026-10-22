@@ -178,6 +178,8 @@ export interface Asset {
   bundle_components?: string;
   asset_brand?: string;
   asset_model?: string;
+  /** Tanda Nomor Kendaraan Bermotor / Nomor Polisi for KND assets. */
+  tnbk?: string;
   serial_number?: string;
   ownership_status?: string;
   ownership_evidence?: string;
