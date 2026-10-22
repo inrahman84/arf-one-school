@@ -61,6 +61,18 @@ export const assetsService = {
       if (prior?.origin_school_id && prior.origin_school_id !== (as.origin_school_id||as.school_id)) {
         throw new Error('School ID asal registrasi tidak dapat diubah.');
       }
+      // Validate the responsible person against the live PTK register, not just
+      // the previously loaded dropdown options.
+      if (as.custodian_id) {
+        const assignedStaff = await getDoc(doc(db,'schools',as.school_id,'staff',as.custodian_id));
+        const person = assignedStaff.exists() ? assignedStaff.data() : null;
+        if (!person || person.school_id !== as.school_id || person.employment_status !== 'Aktif') {
+          throw new Error('Penanggung Jawab harus PTK aktif pada sekolah aset yang dipilih.');
+        }
+        if (as.custodian_name !== person.staff_name) {
+          throw new Error('Nama Penanggung Jawab harus mengikuti nama pada master PTK.');
+        }
+      }
       const payload: Asset = {
         ...as,
         quantity: Number(as.quantity) || 1,
