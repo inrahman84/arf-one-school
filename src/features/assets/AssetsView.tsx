@@ -20,6 +20,10 @@ import { useAuth } from '../../context/AuthContext';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { PhotoUploadField } from '../../components/ui/PhotoUploadField';
 import { checkImageUploadReady, imageStorageService } from '../../services/imageStorageService';
+import {
+  ARF_ASSET_CATEGORIES, ARF_FUNDING_CODES, ARF_LIFECYCLE_STATUSES,
+  categoryLabel, fundingLabel, validateDraftAssetInput, parseAssetDocumentUrls
+} from '../../lib/arfAssetCoding';
 import { DATABASE_SAVE_TIMEOUT_MS, OperationTimeoutError, photoSaveErrorMessage, withTimeout } from '../../services/operationTimeout';
 
 interface AssetsViewProps {
@@ -64,17 +68,42 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
   // Form State
   const [formData, setFormData] = useState({
     asset_id: '',
+    origin_school_id: schools[0]?.school_id || '',
+    current_school_id: schools[0]?.school_id || '',
+    permanent_asset_id: '',
+    display_inventory_code: '',
+    category_code: 'ELK',
+    funding_code: '',
+    funding_details: '',
+    acquisition_year: 0,
+    acquisition_year_unknown: false,
+    registration_type: 'INDIVIDUAL' as 'INDIVIDUAL'|'BUNDLE',
+    registration_status: 'DRAFT' as 'DRAFT'|'VERIFIED'|'APPROVED',
+    bundle_components: '',
+    asset_brand: '',
+    asset_model: '',
+    serial_number: '',
+    ownership_status: '',
+    ownership_evidence: '',
+    external_asset_code: '',
+    room_id: '',
+    custodian_id: '',
+    lifecycle_status: 'ACTIVE',
+    invoice_ref: '',
+    handover_ref: '',
+    document_urls_text: '',
+
     school_id: schools[0]?.school_id || '',
     asset_code: '',
     asset_name: '',
-    asset_category: 'Perangkat IT' as AssetCategory,
+    asset_category: 'Elektronik & TIK' as AssetCategory,
     asset_brand_spec: '',
     asset_serial_number: '',
     quantity: 1,
     unit_measure: 'Unit',
-    acquisition_date: new Date().toISOString().split('T')[0],
-    funding_source: 'ARF' as FundingSource,
-    funding_year: new Date().getFullYear(),
+    acquisition_date: '',
+    funding_source: '' as FundingSource,
+    funding_year: 0,
     acquisition_unit_value: 0,
     asset_condition: 'Baik' as AssetCondition,
     asset_status: 'Digunakan' as AssetStatus,
@@ -106,18 +135,43 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
     setFormError(null);
     setAssetImageFile(null);
     setFormData({
-      asset_id: `AST-${Date.now().toString().slice(-6)}`,
+      asset_id: `AST-${crypto.randomUUID()}`, // draft record ID, NOT a permanent PAID
+      origin_school_id: selectedSchoolId !== 'ALL' ? selectedSchoolId : (accessibleSchools[0]?.school_id || ''),
+      current_school_id: selectedSchoolId !== 'ALL' ? selectedSchoolId : (accessibleSchools[0]?.school_id || ''),
+      permanent_asset_id: '',
+      display_inventory_code: '',
+      category_code: 'ELK',
+      funding_code: '',
+      funding_details: '',
+      acquisition_year: 0,
+      acquisition_year_unknown: false,
+      registration_type: 'INDIVIDUAL',
+      registration_status: 'DRAFT',
+      bundle_components: '',
+      asset_brand: '',
+      asset_model: '',
+      serial_number: '',
+      ownership_status: '',
+      ownership_evidence: '',
+      external_asset_code: '',
+      room_id: '',
+      custodian_id: '',
+      lifecycle_status: 'ACTIVE',
+      invoice_ref: '',
+      handover_ref: '',
+      document_urls_text: '',
+
       school_id: selectedSchoolId !== 'ALL' ? selectedSchoolId : (accessibleSchools[0]?.school_id || ''),
       asset_code: '',
       asset_name: '',
-      asset_category: 'Perangkat IT',
+      asset_category: 'Elektronik & TIK',
       asset_brand_spec: '',
       asset_serial_number: '',
       quantity: 1,
       unit_measure: 'Unit',
-      acquisition_date: new Date().toISOString().split('T')[0],
-      funding_source: 'ARF',
-      funding_year: new Date().getFullYear(),
+      acquisition_date: '',
+      funding_source: '' as FundingSource,
+      funding_year: 0,
       acquisition_unit_value: 0,
       asset_condition: 'Baik',
       asset_status: 'Digunakan',
@@ -133,6 +187,30 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
     setAssetImageFile(null);
     setFormData({
       asset_id: ast.asset_id,
+      origin_school_id: ast.origin_school_id || ast.school_id,
+      current_school_id: ast.current_school_id || ast.school_id,
+      permanent_asset_id: ast.permanent_asset_id || '',
+      display_inventory_code: ast.display_inventory_code || '',
+      category_code: ast.category_code || ARF_ASSET_CATEGORIES.find(c=>c.label===ast.asset_category)?.code || '',
+      funding_code: ast.funding_code || (ARF_FUNDING_CODES.some(x=>x.code===ast.funding_source)?ast.funding_source:''),
+      funding_details: ast.funding_details || '',
+      acquisition_year: ast.acquisition_year || (ast.acquisition_date?Number(ast.acquisition_date.slice(0,4)):0),
+      acquisition_year_unknown: Boolean(ast.acquisition_year_unknown),
+      registration_type: ast.registration_type || (ast.quantity>1?'BUNDLE':'INDIVIDUAL'),
+      registration_status: ast.registration_status || 'DRAFT',
+      bundle_components: ast.bundle_components || '',
+      asset_brand: ast.asset_brand || '',
+      asset_model: ast.asset_model || '',
+      serial_number: ast.serial_number || ast.asset_serial_number || '',
+      ownership_status: ast.ownership_status || '',
+      ownership_evidence: ast.ownership_evidence || '',
+      external_asset_code: ast.external_asset_code || '',
+      room_id: ast.room_id || ast.asset_location_id || '',
+      custodian_id: ast.custodian_id || '',
+      lifecycle_status: ast.lifecycle_status || 'ACTIVE',
+      invoice_ref: ast.invoice_ref || '',
+      handover_ref: ast.handover_ref || '',
+      document_urls_text: (ast.document_urls || []).join('\n'),
       school_id: ast.school_id,
       asset_code: ast.asset_code || '',
       asset_name: ast.asset_name,
@@ -143,7 +221,7 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
       unit_measure: ast.unit_measure,
       acquisition_date: ast.acquisition_date || '',
       funding_source: ast.funding_source,
-      funding_year: ast.funding_year || new Date().getFullYear(),
+      funding_year: ast.funding_year || 0,
       acquisition_unit_value: ast.acquisition_unit_value,
       asset_condition: ast.asset_condition,
       asset_status: ast.asset_status,
@@ -183,6 +261,19 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
     e.preventDefault();
     if (submitInFlight.current) return; // Double-clicks must not initiate duplicate uploads.
     setFormError(null);
+    if (editingAsset?.registration_status === 'APPROVED') {
+      setFormError('Aset yang disahkan tidak boleh dikoreksi melalui form biasa. Diperlukan prosedur koreksi berotorisasi.');
+      return;
+    }
+    let document_urls: string[];
+    try { document_urls = parseAssetDocumentUrls(formData.document_urls_text); }
+    catch (error) { setFormError(error instanceof Error?error.message:'Tautan dokumen tidak valid.'); return; }
+    const validation = validateDraftAssetInput({
+      ...formData, document_urls,
+      acquisition_year: formData.acquisition_year_unknown ? null : Number(formData.acquisition_year),
+      serial_number: formData.serial_number
+    },assets);
+    if (validation) {setFormError(validation); return;}
     if (!formData.asset_name || !formData.school_id) {
       setFormError('Nama Aset dan Sekolah wajib diisi!');
       return;
@@ -212,13 +303,24 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
         image_path = uploaded.path;
       }
       setSaveStage('Menyimpan data aset ke Supabase...');
+      const {document_urls_text: _documentText, ...draftFields} = formData;
       await withTimeout(assetsService.saveAsset({
-        ...formData,
+        ...draftFields,
+        origin_school_id: editingAsset?.origin_school_id || formData.school_id,
+        current_school_id: editingAsset?.current_school_id || formData.school_id,
+        asset_category: categoryLabel(formData.category_code) as AssetCategory,
+        funding_source: formData.funding_code as FundingSource,
+        funding_details: formData.funding_details.trim(),
+        document_urls,
+        acquisition_year: formData.acquisition_year_unknown?null:Number(formData.acquisition_year),
+        funding_year: formData.acquisition_year_unknown?0:Number(formData.acquisition_year),
+        asset_serial_number: formData.serial_number,
+        asset_location_id: formData.room_id,
         image_url,
         image_path,
         quantity: Number(formData.quantity) || 1,
         acquisition_unit_value: Number(formData.acquisition_unit_value) || 0,
-        funding_year: Number(formData.funding_year) || new Date().getFullYear(),
+        funding_year: formData.acquisition_year_unknown?0:Number(formData.acquisition_year),
         created_at: editingAsset ? editingAsset.created_at : new Date().toISOString()
       }), DATABASE_SAVE_TIMEOUT_MS, 'firestore');
       databaseSaved = true;
