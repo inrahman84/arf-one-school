@@ -324,6 +324,7 @@ const MainAppContent: React.FC = () => {
             <AssetsView
               schools={schools}
               assets={assets}
+              staff={staff}
               onRefresh={loadAllData}
             />
           )}
