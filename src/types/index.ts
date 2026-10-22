@@ -41,11 +41,15 @@ export interface Region {
   code: string;
   description?: string;
   status: 'active' | 'inactive';
+  /** Persisted order of regional cards (optional for historical records). */
+  sortOrder?: number;
   createdAt: string;
   updatedAt: string;
 }
 
-export type EducationLevel = 'TPA' | 'PAUD' | 'TK' | 'SD' | 'SMP' | 'SMK';
+export const EDUCATION_LEVELS = ['TPA', 'KB', 'TK', 'SD', 'SMP', 'SMA', 'SMK'] as const;
+/** PAUD is retained for previously stored records; new forms use EDUCATION_LEVELS only. */
+export type EducationLevel = typeof EDUCATION_LEVELS[number] | 'PAUD';
 
 export type OperationalStatus =
   | 'Aktif'
