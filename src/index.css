@@ -45,3 +45,35 @@
     background: white !important;
   }
 }
+
+/* ARF One School — adaptive content for phones, tablets and workstations */
+html, body, #root { min-height: 100%; }
+html { -webkit-text-size-adjust: 100%; }
+.arf-responsive-main { min-width: 0; }
+.arf-responsive-main :where(img, svg, video, canvas) { max-width: 100%; }
+.arf-responsive-main :where(input, select, textarea) { max-width: 100%; }
+.arf-responsive-main :where(.grid, .flex) { min-width: 0; }
+.arf-responsive-main :where(.overflow-x-auto) {
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+@media (max-width: 767px) {
+  /* Long desktop tables remain readable by swiping horizontally. */
+  .arf-responsive-main .overflow-x-auto > table {
+    min-width: max(42rem, 100%);
+  }
+  .arf-responsive-main .fixed.inset-0 {
+    padding: 0.5rem;
+  }
+  .arf-responsive-main .fixed.inset-0 > div {
+    max-width: calc(100vw - 1rem);
+    max-height: 94dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+@media (max-width: 480px) {
+  .arf-responsive-main :where(button, input, select, textarea) {
+    font-size: max(12px, 0.75rem);
+  }
+}
