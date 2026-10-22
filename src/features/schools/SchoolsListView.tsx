@@ -216,7 +216,7 @@ export const SchoolsListView: React.FC<SchoolsListViewProps> = ({
     }
   };
 
-  // Desa/Kelurahan berasal dari data sekolah, mengikuti filter Regional/Jenjang.
+  // Desa/Estate berasal dari data sekolah, mengikuti filter Regional/Jenjang.
   const villageOptions = Array.from(new Set(schools
     .filter(s => hasSchoolAccess(s.school_id))
     .filter(s => selectedRegion === 'ALL' || s.regional_id === selectedRegion)
@@ -251,7 +251,7 @@ export const SchoolsListView: React.FC<SchoolsListViewProps> = ({
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
-              placeholder="Cari nama sekolah, NPSN, desa/kelurahan..."
+              placeholder="Cari nama sekolah, NPSN, desa/estate..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full text-xs pl-9 pr-3 py-2 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-1 focus:ring-[#073b2d]"
@@ -280,18 +280,18 @@ export const SchoolsListView: React.FC<SchoolsListViewProps> = ({
             {EDUCATION_LEVELS.map(level => <option key={level} value={level}>{level}</option>)}
           </select>
 
-          {/* Filter desa/kelurahan dari master sekolah (tidak memerlukan tabel referensi tambahan) */}
+          {/* Filter desa/estate dari master sekolah (tidak memerlukan tabel referensi tambahan) */}
           <select
-            aria-label="Filter Desa/Kelurahan"
+            aria-label="Filter Desa/Estate"
             value={selectedVillage}
             onChange={(e) => setSelectedVillage(e.target.value)}
             className="text-xs py-2 px-3 rounded-lg border border-gray-300 bg-white text-gray-800"
           >
-            <option value="ALL">Semua Desa/Kelurahan</option>
+            <option value="ALL">Semua Desa/Estate</option>
             {villageOptions.map(village => (
               <option key={village} value={village}>{village}</option>
             ))}
-            {villageOptions.length === 0 && <option disabled value="NO_VILLAGE">Belum ada data Desa/Kelurahan</option>}
+            {villageOptions.length === 0 && <option disabled value="NO_VILLAGE">Belum ada data Desa/Estate</option>}
           </select>
         </div>
 
@@ -507,7 +507,7 @@ export const SchoolsListView: React.FC<SchoolsListViewProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Desa / Kelurahan</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Desa/Estate</label>
                   <input
                     type="text"
                     value={formData.village}
