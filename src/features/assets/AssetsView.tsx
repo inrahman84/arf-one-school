@@ -713,7 +713,7 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
                   <label className="block text-xs font-semibold text-gray-700 mb-1">School ID Saat Ini</label>
                   <input readOnly value={formData.current_school_id || formData.school_id}
                     className="w-full text-xs p-2 rounded-lg border border-gray-300 bg-gray-50 font-mono"/>
-                  <p className="mt-1 text-[11px] text-gray-500">Mutasi antar-sekolah harus melalui alur persetujuan terpisah.</p>
+                  <p className="mt-1 text-[11px] text-gray-500">Mutasi antar-sekolah harus melalui alur persetujuan terpisah. Kode sekolah dari Master Sekolah harus divalidasi sebelum penerbitan DIC.</p>
                 </div>
 
                 <div className="sm:col-span-2">
@@ -742,6 +742,7 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
                     {formData.category_code==='' && <option value="">— Pilih kategori ARF —</option>}
                     {ARF_ASSET_CATEGORIES.map(item=><option key={item.code} value={item.code}>{item.code} — {item.label}</option>)}
                   </select>
+                  {formData.category_code==='BGN' && <p className="mt-1 text-[11px] text-amber-800">Bangunan dan konstruksi menggunakan register legal/aset khusus. Jangan menyamakannya dengan inventaris bergerak.</p>}
                 </div>
 
                 <div>
@@ -783,7 +784,7 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
                     <option value="INDIVIDUAL">Aset individual (1 unit)</option>
                     <option value="BUNDLE">Bundel tidak terpisahkan (1 aset induk)</option>
                   </select>
-                  <p className="text-[11px] text-gray-500 mt-1">10 laptop berarti 10 aset terpisah, bukan 1 aset berjumlah 10.</p>
+                  <p className="text-[11px] text-gray-500 mt-1">10 laptop berarti 10 aset terpisah, bukan 1 aset berjumlah 10. Barang habis pakai dicatat dalam register persediaan tersendiri.</p>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Jumlah Unit *</label>
@@ -890,7 +891,7 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
                     <option value="Digunakan">Digunakan</option>
                     <option value="Disimpan">Disimpan (Gudang)</option>
                     <option value="Dalam Perbaikan">Dalam Perbaikan</option>
-                    <option value="Dihapus">Dihapus / Afkir</option>
+                    {formData.asset_status === 'Dihapus' && <option value="Dihapus" disabled>Dihapus (riwayat lama, perlu otorisasi)</option>}
                   </select>
                 </div>
               </div>
