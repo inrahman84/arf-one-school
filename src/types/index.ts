@@ -51,11 +51,15 @@ export const EDUCATION_LEVELS = ['TPA', 'KB', 'TK', 'SD', 'SMP', 'SMA', 'SMK'] a
 /** PAUD is retained for previously stored records; new forms use EDUCATION_LEVELS only. */
 export type EducationLevel = typeof EDUCATION_LEVELS[number] | 'PAUD';
 
-export type OperationalStatus =
-  | 'Aktif'
-  | 'Izin Operasional Baru'
-  | 'Menunggu Akreditasi'
-  | 'Nonaktif';
+/** Status baru untuk pengisian dan pengeditan data sekolah. */
+export const OPERATIONAL_STATUS_OPTIONS = [
+  'Aktif Memiliki Izin Operasional',
+  'Aktif Tidak Memiliki Izin Operasional',
+  'Tidak Aktif'
+] as const;
+/** Legacy labels remain readable; saving a school requires one of the new statuses. */
+export type OperationalStatus = typeof OPERATIONAL_STATUS_OPTIONS[number]
+  | 'Aktif' | 'Izin Operasional Baru' | 'Menunggu Akreditasi' | 'Nonaktif';
 
 export type AccreditationGrade = 'A' | 'B' | 'C' | 'Belum Terakreditasi';
 
