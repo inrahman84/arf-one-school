@@ -16,7 +16,13 @@ export const authService = {
   async signInWithAuthorizedEmail(emailInput:string):Promise<void> {
     const email=emailInput.toLowerCase().trim();
     if(!email) throw new Error('Email harus diisi');
-    const {error}=await supabase.auth.signInWithOtp({email,options:{emailRedirectTo:window.location.origin,shouldCreateUser:true}});
+    const {error}=await supabase.auth.signInWithOtp({email,options:{emailRedirectTo:window.location.origin,shouldCreateUser:false}});
+    if(error) throw error;
+  },
+  async signInWithPassword(emailInput:string,password:string):Promise<void> {
+    const email=emailInput.toLowerCase().trim();
+    if(!email || !password) throw new Error('Email dan kata sandi harus diisi.');
+    const {error}=await supabase.auth.signInWithPassword({email,password});
     if(error) throw error;
   },
   async signOutUser():Promise<void>{const {error}=await supabase.auth.signOut(); if(error)throw error;},
