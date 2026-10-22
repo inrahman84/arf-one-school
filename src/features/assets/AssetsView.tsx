@@ -13,7 +13,7 @@ import {
   Archive,
   Image as ImageIcon
 } from 'lucide-react';
-import { Asset, School, AssetCategory, AssetCondition, AssetStatus, FundingSource } from '../../types';
+import { Asset, School, Staff, AssetCategory, AssetCondition, AssetStatus, FundingSource } from '../../types';
 import { assetsService } from '../../services/assetsService';
 import { excelService } from '../../services/excelService';
 import { useAuth } from '../../context/AuthContext';
@@ -21,7 +21,7 @@ import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { PhotoUploadField } from '../../components/ui/PhotoUploadField';
 import { checkImageUploadReady, imageStorageService } from '../../services/imageStorageService';
 import {
-  ARF_ASSET_CATEGORIES, ARF_FUNDING_CODES, ARF_LIFECYCLE_STATUSES,
+  ARF_ASSET_CATEGORIES, ARF_FUNDING_CODES,
   categoryLabel, fundingLabel, validateDraftAssetInput, parseAssetDocumentUrls
 } from '../../lib/arfAssetCoding';
 import { DATABASE_SAVE_TIMEOUT_MS, OperationTimeoutError, photoSaveErrorMessage, withTimeout } from '../../services/operationTimeout';
@@ -29,12 +29,14 @@ import { DATABASE_SAVE_TIMEOUT_MS, OperationTimeoutError, photoSaveErrorMessage,
 interface AssetsViewProps {
   schools: School[];
   assets: Asset[];
+  staff: Staff[];
   onRefresh: () => void;
 }
 
 export const AssetsView: React.FC<AssetsViewProps> = ({
   schools,
   assets,
+  staff,
   onRefresh
 }) => {
   const { hasSchoolAccess, isSuperAdmin, isFoundationManager, isAssetOfficer } = useAuth();
@@ -51,6 +53,7 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
   const submitInFlight = useRef(false);
   const [saveStage, setSaveStage] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [newDocumentLink, setNewDocumentLink] = useState('');
   const [assetImageFile, setAssetImageFile] = useState<File | null>(null);
 
   // Delete modal state
@@ -94,7 +97,7 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
     lifecycle_status: 'ACTIVE',
     invoice_ref: '',
     handover_ref: '',
-    document_urls_text: '',
+    document_links: [] as string[],
 
     school_id: schools[0]?.school_id || '',
     asset_code: '',
@@ -114,7 +117,43 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
     image_path: ''
   });
 
-  const accessibleSchools = schools.filter(s => hasSchoolAccess(s.school_id));
+const accessibleSchools = schools.filter(s => hasSchoolAccess(s.school_id));
+  const custodianCandidates = staff
+    .filter(person => person.school_id === formData.school_id && person.employment_status === 'Aktif')
+    .sort((a, b) => a.staff_name.localeCompare(b.staff_name, 'id'));
+
+  const handleAddDocumentLink = () => {
+    if (submitting) return;
+    const input = newDocumentLink.trim();
+    if (!input) {
+      setFormError('Masukkan tautan bukti dokumen terlebih dahulu.');
+      return;
+    }
+    try {
+      const [url] = parseAssetDocumentUrls(input);
+      if (!url || url !== input || input.includes('\n')) {
+        throw new Error('Masukkan satu URL HTTPS untuk setiap tautan.');
+      }
+      if (formData.document_links.includes(url)) {
+        setFormError('Tautan bukti dokumen ini sudah ada dalam daftar.');
+        return;
+      }
+      setFormData(prev => ({ ...prev, document_links: [...prev.document_links, url] }));
+      setNewDocumentLink('');
+      setFormError(null);
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : 'Tautan bukti dokumen tidak valid.');
+    }
+  };
+
+  const handleRemoveDocumentLink = (url: string) => {
+    if (submitting) return;
+    setFormData(prev => ({
+      ...prev,
+      document_links: prev.document_links.filter(item => item !== url)
+    }));
+    setFormError(null);
+  };
 
   const filteredAssets = assets.filter(a => {
     if(!showArchived && a.archived_at) return false;
@@ -142,6 +181,7 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
     setEditingAsset(null);
     setFormError(null);
     setAssetImageFile(null);
+    setNewDocumentLink('');
     setFormData({
       asset_id: `AST-${crypto.randomUUID()}`, // draft record ID, NOT a permanent PAID
       asset_number: '',
@@ -169,7 +209,7 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
       lifecycle_status: 'ACTIVE',
       invoice_ref: '',
       handover_ref: '',
-      document_urls_text: '',
+      document_links: [] as string[],
 
       school_id: selectedSchoolId !== 'ALL' ? selectedSchoolId : (accessibleSchools[0]?.school_id || ''),
       asset_code: '',
@@ -195,6 +235,7 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
     setEditingAsset(ast);
     setFormError(null);
     setAssetImageFile(null);
+    setNewDocumentLink('');
     setFormData({
       asset_id: ast.asset_id,
       asset_number: ast.asset_number || '',
@@ -222,7 +263,7 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
       lifecycle_status: ast.lifecycle_status || 'ACTIVE',
       invoice_ref: ast.invoice_ref || '',
       handover_ref: ast.handover_ref || '',
-      document_urls_text: (ast.document_urls || []).join('\n'),
+      document_links: [...(ast.document_urls || [])],
       school_id: ast.school_id,
       asset_code: ast.asset_code || '',
       asset_name: ast.asset_name,
@@ -278,7 +319,7 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
       return;
     }
     let document_urls: string[];
-    try { document_urls = parseAssetDocumentUrls(formData.document_urls_text); }
+    try { document_urls = parseAssetDocumentUrls(formData.document_links.join('\n')); }
     catch (error) { setFormError(error instanceof Error?error.message:'Tautan dokumen tidak valid.'); return; }
     const validation = validateDraftAssetInput({
       ...formData, document_urls,
@@ -286,6 +327,13 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
       serial_number: formData.serial_number
     },assets);
     if (validation) {setFormError(validation); return;}
+    const custodian = formData.custodian_id
+      ? custodianCandidates.find(person => person.staff_id === formData.custodian_id)
+      : undefined;
+    if (formData.custodian_id && !custodian) {
+      setFormError('Penanggung Jawab harus PTK aktif yang terdaftar pada sekolah aset ini. Silakan pilih kembali.');
+      return;
+    }
     if (!formData.asset_name || !formData.school_id) {
       setFormError('Nama Aset dan Sekolah wajib diisi!');
       return;
@@ -315,10 +363,12 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
         image_path = uploaded.path;
       }
       setSaveStage('Menyimpan data aset ke Supabase...');
-      const {document_urls_text: _documentText, ...draftFields} = formData;
+      const {document_links: _documentLinks, ...draftFields} = formData;
       await withTimeout(assetsService.saveAsset({
         ...draftFields,
         asset_number: formData.asset_number.trim(),
+        custodian_id: custodian?.staff_id || '',
+        custodian_name: custodian?.staff_name || '',
         origin_school_id: editingAsset?.origin_school_id || formData.school_id,
         current_school_id: editingAsset?.current_school_id || formData.school_id,
         asset_category: categoryLabel(formData.category_code) as AssetCategory,
@@ -680,7 +730,8 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
                     value={formData.school_id}
                     onChange={(e) => setFormData({
                       ...formData, school_id: e.target.value,
-                      origin_school_id: e.target.value, current_school_id: e.target.value
+                      origin_school_id: e.target.value, current_school_id: e.target.value,
+                      custodian_id: ''
                     })}
                     disabled={Boolean(editingAsset)}
                     title={editingAsset ? "Sekolah asal aset tidak dapat diganti saat edit." : undefined}
@@ -903,23 +954,36 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
               </div>
 
               <div className="rounded-xl border border-gray-200 p-3 sm:p-4 space-y-3">
-                <h4 className="text-sm font-bold text-[#073b2d]">Penempatan, Penguasaan &amp; Dokumen</h4>
+                <h4 className="text-sm font-bold text-[#073b2d]">Penanggung Jawab &amp; Dokumen</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">ID Ruang / Lokasi Aset</label>
-                    <input type="text" value={formData.room_id} onChange={e=>setFormData({...formData,room_id:e.target.value})}
-                      placeholder="Kode ruang penyimpanan" className="w-full rounded-lg border border-gray-300 p-2 text-xs"/>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">ID Penanggung Jawab (Custodian)</label>
-                    <input type="text" value={formData.custodian_id} onChange={e=>setFormData({...formData,custodian_id:e.target.value})}
-                      placeholder="ID petugas yang menjaga/memakai" className="w-full rounded-lg border border-gray-300 p-2 text-xs"/>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Status Penguasaan / Kepemilikan Legal</label>
-                    <input type="text" value={formData.ownership_status} onChange={e=>setFormData({...formData,ownership_status:e.target.value})}
-                      placeholder="Dasar hukum: ARF / Pemerintah / Donatur / Belum terverifikasi"
-                      className="w-full rounded-lg border border-gray-300 p-2 text-xs"/>
+                  <div className="sm:col-span-2">
+                    <label htmlFor="arf-asset-custodian" className="block text-xs font-semibold text-gray-700 mb-1">Penanggung Jawab</label>
+                    <select
+                      id="arf-asset-custodian"
+                      value={formData.custodian_id}
+                      onChange={e => setFormData(prev => ({ ...prev, custodian_id: e.target.value }))}
+                      disabled={submitting}
+                      className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-xs"
+                    >
+                      <option value="">— Belum ditetapkan —</option>
+                      {formData.custodian_id &&
+                        !custodianCandidates.some(person => person.staff_id === formData.custodian_id) && (
+                          <option value={formData.custodian_id} disabled>
+                            PTK sebelumnya tidak aktif / tidak ditemukan — pilih ulang
+                          </option>
+                        )}
+                      {custodianCandidates.map(person => (
+                        <option key={person.staff_id} value={person.staff_id}>
+                          {person.staff_name} — {person.primary_position || person.staff_category}
+                        </option>
+                      ))}
+                    </select>
+                    {custodianCandidates.length === 0 && (
+                      <p className="mt-1 text-xs text-amber-800">
+                        Belum ada Guru atau Tenaga Kependidikan aktif pada sekolah ini.
+                        Tambahkan data PTK melalui menu Guru &amp; Tenaga Kependidikan.
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-1">Bukti Kepemilikan Legal</label>
@@ -932,19 +996,6 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
                       placeholder="Kode pemerintah / donor, jika ada" className="w-full rounded-lg border border-gray-300 p-2 text-xs"/>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Status Siklus Hidup</label>
-                    <select value={formData.lifecycle_status} onChange={e=>setFormData({...formData,lifecycle_status:e.target.value})}
-                      className="w-full rounded-lg border border-gray-300 p-2 text-xs">
-                      {ARF_LIFECYCLE_STATUSES.filter(item=>
-                        ['ACTIVE','STORED','MAINTENANCE'].includes(item.code) || item.code===formData.lifecycle_status
-                      ).map(item=><option key={item.code} value={item.code}
-                        disabled={!['ACTIVE','STORED','MAINTENANCE'].includes(item.code)}>
-                        {item.code} — {item.label}
-                      </option>)}
-                    </select>
-                    <p className="mt-1 text-[11px] text-gray-500">Penghapusan legal, mutasi, dan koreksi memerlukan persetujuan di luar form DRAFT.</p>
-                  </div>
-                  <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-1">Referensi Invoice/Kuitansi/Kontrak</label>
                     <input type="text" value={formData.invoice_ref} onChange={e=>setFormData({...formData,invoice_ref:e.target.value})}
                       placeholder="Nomor bukti pengadaan" className="w-full rounded-lg border border-gray-300 p-2 text-xs"/>
@@ -954,20 +1005,53 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
                     <input type="text" value={formData.handover_ref} onChange={e=>setFormData({...formData,handover_ref:e.target.value})}
                       placeholder="Nomor BA serah terima" className="w-full rounded-lg border border-gray-300 p-2 text-xs"/>
                   </div>
-                  <div className="sm:col-span-2">
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Tautan Bukti Dokumen (HTTPS, satu URL per baris)</label>
-                    <textarea rows={3} value={formData.document_urls_text}
-                      onChange={e=>setFormData({...formData,document_urls_text:e.target.value})}
-                      placeholder="https://.../invoice&#10;https://.../berita-acara"
-                      className="w-full rounded-lg border border-gray-300 p-2 text-xs"/>
-                    <p className="text-[11px] text-gray-500 mt-1">Referensi dokumen saja; tautan harus diberikan izin akses sesuai peran. Form ini belum mengunggah PDF ke Storage.</p>
+                  <div className="sm:col-span-2 space-y-2">
+                    <label htmlFor="arf-evidence-link" className="block text-xs font-semibold text-gray-700">Tautan Bukti Dokumen</label>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <input
+                        id="arf-evidence-link"
+                        type="url"
+                        inputMode="url"
+                        placeholder="https://..."
+                        value={newDocumentLink}
+                        onChange={e => setNewDocumentLink(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddDocumentLink();
+                          }
+                        }}
+                        disabled={submitting}
+                        className="min-w-0 flex-1 rounded-lg border border-gray-300 p-2.5 text-xs"
+                      />
+                      <button type="button" onClick={handleAddDocumentLink} disabled={submitting}
+                        className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#073b2d] px-3 py-2.5 text-xs font-semibold text-white disabled:opacity-50">
+                        <Plus className="h-3.5 w-3.5" /> Tambah Link
+                      </button>
+                    </div>
+                    {formData.document_links.length > 0 && (
+                      <ul className="space-y-2" aria-label="Daftar tautan bukti dokumen">
+                        {formData.document_links.map((url, index) => (
+                          <li key={url} className="flex min-w-0 items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-2">
+                            <span className="shrink-0 text-xs font-semibold text-gray-500">{index + 1}.</span>
+                            {url.startsWith('https://') ? (
+                              <a href={url} target="_blank" rel="noopener noreferrer"
+                                className="min-w-0 flex-1 truncate text-xs text-[#3f6276] underline" title={url}>{url}</a>
+                            ) : (
+                              <span className="min-w-0 flex-1 truncate text-xs text-amber-800" title={url}>{url}</span>
+                            )}
+                            <button type="button" disabled={submitting}
+                              aria-label={`Hapus tautan ${index + 1}`} title="Hapus Link"
+                              onClick={() => handleRemoveDocumentLink(url)}
+                              className="shrink-0 rounded-md p-1.5 text-rose-700 hover:bg-rose-50 disabled:opacity-50">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
                 </div>
-              </div>
-
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-                Panduan ARF-STD-AST-001 masih berstatus DRAF. Form ini menyimpan DRAFT dan tidak menerbitkan nomor inventaris resmi.
-                Foto tersimpan di Supabase Storage; referensi bukti perolehan dicatat di bawah ini.
               </div>
 
               <PhotoUploadField
