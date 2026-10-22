@@ -325,7 +325,6 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
         image_path,
         quantity: Number(formData.quantity) || 1,
         acquisition_unit_value: Number(formData.acquisition_unit_value) || 0,
-        funding_year: formData.acquisition_year_unknown?0:Number(formData.acquisition_year),
         created_at: editingAsset ? editingAsset.created_at : new Date().toISOString()
       }), DATABASE_SAVE_TIMEOUT_MS, 'firestore');
       databaseSaved = true;
