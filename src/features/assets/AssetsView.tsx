@@ -722,6 +722,26 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
                 </div>
 
                 <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Merek Barang</label>
+                  <input type="text" value={formData.asset_brand}
+                    onChange={e=>setFormData({...formData,asset_brand:e.target.value})}
+                    className="w-full text-xs p-2 rounded-lg border border-gray-300" placeholder="Acer, Lenovo, Yamaha ..."/>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Model / Tipe Barang</label>
+                  <input type="text" value={formData.asset_model}
+                    onChange={e=>setFormData({...formData,asset_model:e.target.value})}
+                    className="w-full text-xs p-2 rounded-lg border border-gray-300" placeholder="Chromebook 311, dsb."/>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Serial Number / Nomor Seri</label>
+                  <input type="text" value={formData.serial_number}
+                    onChange={e=>setFormData({...formData,serial_number:e.target.value})}
+                    className="w-full text-xs p-2 rounded-lg border border-gray-300"
+                    placeholder="Nomor seri jika tersedia"/>
+                  <p className="mt-1 text-[11px] text-gray-500">Diperiksa terhadap nomor seri aset lain di sekolah yang sama.</p>
+                </div>
+                <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Merk / Spesifikasi Singkat</label>
                   <input
                     type="text"
@@ -801,6 +821,17 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
                   </label>
                 </div>
 
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Rincian Sumber Dana / Dasar Perolehan</label>
+                  <textarea rows={2} value={formData.funding_details}
+                    onChange={e=>setFormData({...formData,funding_details:e.target.value})}
+                    className="w-full text-xs p-2 rounded-lg border border-gray-300"
+                    placeholder="Program/kegiatan, tahun anggaran, pemberi bantuan, nomor persetujuan, atau alasan kode LGC."/>
+                  <p className="text-[11px] text-gray-500 mt-1">
+                    Kode sumber dana harus didukung bukti perolehan. LGC hanya untuk sensus/migrasi aset lama.
+                    Pendanaan gabungan tidak disediakan pada form ini karena panduan memuat larangan penggunaannya.
+                  </p>
+                </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Harga Satuan Perolehan (Rp)</label>
                   <input
@@ -838,6 +869,64 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
                     <option value="Dalam Perbaikan">Dalam Perbaikan</option>
                     <option value="Dihapus">Dihapus / Afkir</option>
                   </select>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-gray-200 p-3 sm:p-4 space-y-3">
+                <h4 className="text-sm font-bold text-[#073b2d]">Penempatan, Penguasaan &amp; Dokumen</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">ID Ruang / Lokasi Aset</label>
+                    <input type="text" value={formData.room_id} onChange={e=>setFormData({...formData,room_id:e.target.value})}
+                      placeholder="Kode ruang penyimpanan" className="w-full rounded-lg border border-gray-300 p-2 text-xs"/>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">ID Penanggung Jawab (Custodian)</label>
+                    <input type="text" value={formData.custodian_id} onChange={e=>setFormData({...formData,custodian_id:e.target.value})}
+                      placeholder="ID petugas yang menjaga/memakai" className="w-full rounded-lg border border-gray-300 p-2 text-xs"/>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Status Penguasaan / Kepemilikan Legal</label>
+                    <input type="text" value={formData.ownership_status} onChange={e=>setFormData({...formData,ownership_status:e.target.value})}
+                      placeholder="Dasar hukum: ARF / Pemerintah / Donatur / Belum terverifikasi"
+                      className="w-full rounded-lg border border-gray-300 p-2 text-xs"/>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Bukti Kepemilikan Legal</label>
+                    <input type="text" value={formData.ownership_evidence} onChange={e=>setFormData({...formData,ownership_evidence:e.target.value})}
+                      placeholder="Nomor dokumen / dasar hak" className="w-full rounded-lg border border-gray-300 p-2 text-xs"/>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Kode Aset Eksternal</label>
+                    <input type="text" value={formData.external_asset_code} onChange={e=>setFormData({...formData,external_asset_code:e.target.value})}
+                      placeholder="Kode pemerintah / donor, jika ada" className="w-full rounded-lg border border-gray-300 p-2 text-xs"/>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Status Siklus Hidup</label>
+                    <select value={formData.lifecycle_status} onChange={e=>setFormData({...formData,lifecycle_status:e.target.value})}
+                      className="w-full rounded-lg border border-gray-300 p-2 text-xs">
+                      {ARF_LIFECYCLE_STATUSES.map(item=><option key={item.code} value={item.code}>{item.code} — {item.label}</option>)}
+                    </select>
+                    <p className="mt-1 text-[11px] text-gray-500">Penghapusan legal, mutasi, dan koreksi memerlukan persetujuan di luar form DRAFT.</p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Referensi Invoice/Kuitansi/Kontrak</label>
+                    <input type="text" value={formData.invoice_ref} onChange={e=>setFormData({...formData,invoice_ref:e.target.value})}
+                      placeholder="Nomor bukti pengadaan" className="w-full rounded-lg border border-gray-300 p-2 text-xs"/>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Referensi Berita Acara / Serah Terima</label>
+                    <input type="text" value={formData.handover_ref} onChange={e=>setFormData({...formData,handover_ref:e.target.value})}
+                      placeholder="Nomor BA serah terima" className="w-full rounded-lg border border-gray-300 p-2 text-xs"/>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Tautan Bukti Dokumen (HTTPS, satu URL per baris)</label>
+                    <textarea rows={3} value={formData.document_urls_text}
+                      onChange={e=>setFormData({...formData,document_urls_text:e.target.value})}
+                      placeholder="https://.../invoice&#10;https://.../berita-acara"
+                      className="w-full rounded-lg border border-gray-300 p-2 text-xs"/>
+                    <p className="text-[11px] text-gray-500 mt-1">Referensi dokumen saja; tautan harus diberikan izin akses sesuai peran. Form ini belum mengunggah PDF ke Storage.</p>
+                  </div>
                 </div>
               </div>
 
