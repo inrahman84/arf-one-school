@@ -202,7 +202,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   // 2. Student Enrollment by Education Level
   const studentsByLevelData = useMemo(() => {
-    const map: Record<string, number> = { 'TPA': 0, 'PAUD': 0, 'TK': 0, 'SD': 0, 'SMP': 0, 'SMK': 0 };
+    const map: Record<string, number> = { 'TPA': 0, 'KB': 0, 'TK': 0, 'SD': 0, 'SMP': 0, 'SMA': 0, 'SMK': 0, 'PAUD': 0 };
     filteredClasses.forEach(c => {
       const sch = schools.find(s => s.school_id === c.school_id);
       if (sch && map[sch.education_level] !== undefined) {
