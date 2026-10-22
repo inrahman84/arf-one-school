@@ -3,12 +3,22 @@ import { Shield, Sparkles, Building, CheckCircle2, AlertCircle, ArrowRight, Mail
 import { useAuth } from '../../context/AuthContext';
 
 export const LoginView: React.FC = () => {
-  const { loginWithGoogle, loginWithEmail, loading } = useAuth();
+  const { loginWithGoogle, loginWithEmail, loginWithPassword, loading } = useAuth();
   const [emailSent, setEmailSent] = useState(false);
+  const [password, setPassword] = useState('');
+  const [signingIn, setSigningIn] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [manualEmail, setManualEmail] = useState('');
   const [showEmailInput, setShowEmailInput] = useState(false);
 
+  const handlePasswordSubmit=async(e:React.FormEvent)=>{
+    e.preventDefault();
+    setErrorMsg(null);
+    setSigningIn(true);
+    try { await loginWithPassword(manualEmail.trim(),password); }
+    catch(err:any) { setErrorMsg(err?.message||'Login gagal. Periksa email dan kata sandi.'); }
+    finally { setSigningIn(false); }
+  };
   const handleGoogleLogin=async()=>{setErrorMsg(null);try{await loginWithGoogle();}catch(err:any){setErrorMsg(err?.message||'Google Sign-In belum dikonfigurasi di Supabase.');}};
   const handleManualEmailSubmit=async(e:React.FormEvent)=>{e.preventDefault();setErrorMsg(null);setEmailSent(false);
     try{await loginWithEmail(manualEmail.trim());setEmailSent(true);}
@@ -54,6 +64,28 @@ export const LoginView: React.FC = () => {
           )}
 
           {emailSent && <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-800">Tautan masuk telah dikirim. Buka email Anda dan klik tautan untuk masuk. Pastikan alamat email terdaftar pada ARF One School.</div>}
+          {/* Password authentication works without external redirect allowlist. */}
+          <form onSubmit={handlePasswordSubmit} className="space-y-3">
+            <div>
+              <label htmlFor="arf-email" className="block text-xs font-semibold text-gray-700 mb-1">Email Pengguna</label>
+              <input id="arf-email" type="email" autoComplete="username" required
+                value={manualEmail} onChange={e=>setManualEmail(e.target.value)}
+                placeholder="email@organisasi.sch.id"
+                className="w-full p-3 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#073b2d]/40" />
+            </div>
+            <div>
+              <label htmlFor="arf-password" className="block text-xs font-semibold text-gray-700 mb-1">Kata Sandi</label>
+              <input id="arf-password" type="password" autoComplete="current-password" required
+                value={password} onChange={e=>setPassword(e.target.value)}
+                className="w-full p-3 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#073b2d]/40" />
+            </div>
+            <button type="submit" disabled={loading||signingIn}
+              className="w-full rounded-xl bg-[#073b2d] px-4 py-3 text-white text-sm font-semibold hover:bg-[#0d4d3b] disabled:opacity-60">
+              {signingIn ? 'Memverifikasi akun...' : 'Masuk ke ARF One School'}
+            </button>
+          </form>
+          <p className="text-[11px] text-gray-500 text-center">Gunakan akun Supabase yang telah diotorisasi. Jika lupa kata sandi, hubungi administrator untuk pengaturan ulang.</p>
+          <div className="relative flex items-center gap-3 text-gray-400 text-[11px]"><div className="h-px bg-gray-200 flex-1"/><span>Metode lainnya</span><div className="h-px bg-gray-200 flex-1"/></div>
           {/* 2. Google OAuth Button */}
           <button
             onClick={handleGoogleLogin}
