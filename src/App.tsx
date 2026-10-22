@@ -48,6 +48,17 @@ const MainAppContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<NavItemKey>('dashboard');
   const [selectedSchoolId, setSelectedSchoolId] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  // The navigation drawer is modal on phones/tablets; preserve the desktop sidebar.
+  useEffect(() => {
+    if (!mobileNavOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileNavOpen(false);
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [mobileNavOpen]);
 
   // Data Store
   const [regions, setRegions] = useState<Region[]>([]);
@@ -225,22 +236,26 @@ const MainAppContent: React.FC = () => {
         onSelectTab={(tab) => {
           setActiveTab(tab);
           setSelectedSchoolId(null);
+          setMobileNavOpen(false);
         }}
+        mobileOpen={mobileNavOpen}
+        onCloseMobile={() => setMobileNavOpen(false)}
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
       />
 
       {/* Main Content Pane */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
+      <div className="flex-1 flex flex-col min-w-0 w-full overflow-x-hidden">
         {/* Top Header */}
         <Header
           pageTitle={selectedSchoolId && activeSchool ? activeSchool.school_name : currentMeta.title}
           pageSubtitle={selectedSchoolId && activeSchool ? `Profil Terperinci Unit Sekolah` : currentMeta.subtitle}
           onDataRefresh={loadAllData}
+          onMenuToggle={() => setMobileNavOpen(true)}
         />
 
         {/* View Routing */}
-        <main className="flex-1 p-6 md:p-8 max-w-7xl w-full mx-auto">
+        <main id="main-content" className="arf-responsive-main flex-1 min-w-0 w-full max-w-7xl mx-auto px-3 py-4 sm:px-5 sm:py-6 lg:p-8">
           {activeTab === 'dashboard' && (
             <DashboardView
               schools={schools}
@@ -280,6 +295,7 @@ const MainAppContent: React.FC = () => {
               <SchoolsListView
                 schools={schools}
                 regions={regions}
+                staff={staff}
                 onRefresh={loadAllData}
                 onSelectSchool={(sid) => setSelectedSchoolId(sid)}
               />
