@@ -35,7 +35,7 @@ export const excelService = {
           'NPSN': '30205812',
           'Nama Sekolah (Wajib)': 'SD ARF Bestari Sampit',
           'ID Regional (Wajib)': 'REG-KTG',
-          'Jenjang (TPA/PAUD/TK/SD/SMP/SMK)': 'SD',
+          'Jenjang (TPA/KB/TK/SD/SMP/SMA/SMK)': 'SD',
           'Alamat Sekolah': 'Jl. Tjilik Riwut Km 4.5',
           'Kecamatan': 'Baamang',
           'Kabupaten/Kota': 'Kotawaringin Timur',
