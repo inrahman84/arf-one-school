@@ -14,7 +14,8 @@ import {
   Sparkles,
   ClipboardCheck,
   History,
-  CalendarDays
+  CalendarDays,
+  X
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -39,15 +40,21 @@ interface SidebarProps {
   onSelectTab: (tab: NavItemKey) => void;
   collapsed: boolean;
   onToggleCollapse: () => void;
+  mobileOpen: boolean;
+  onCloseMobile: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
   activeTab,
   onSelectTab,
   collapsed,
-  onToggleCollapse
+  onToggleCollapse,
+  mobileOpen,
+  onCloseMobile
 }) => {
   const { userProfile, effectiveRole, isSuperAdmin, isFoundationManager, logout } = useAuth();
+
+  const compact = collapsed && !mobileOpen;
 
   // Role-based navigation permissions
   const menuSections = [
@@ -157,12 +164,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
   ];
 
   return (
-    <aside
-      className={`h-screen sticky top-0 flex flex-col justify-between transition-all duration-300 z-30 shadow-xl ${
-        collapsed ? 'w-20' : 'w-72'
-      }`}
-      style={{ backgroundColor: '#073b2d' }}
-    >
+    <>
+      {mobileOpen && <button
+        type="button"
+        aria-label="Tutup menu navigasi"
+        title="Tutup menu navigasi"
+        onClick={onCloseMobile}
+        className="fixed inset-0 z-40 bg-black/55 lg:hidden"
+      />}
+      <aside
+        id="arf-mobile-nav"
+        aria-label="Navigasi ARF One School"
+        className={`fixed inset-y-0 left-0 z-50 flex h-[100dvh] w-[min(19rem,85vw)] flex-col justify-between shadow-xl transition-transform duration-300 lg:sticky lg:top-0 lg:z-30 lg:h-screen lg:translate-x-0 ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        } ${collapsed ? 'lg:w-20' : 'lg:w-72'}`}
+        style={{ backgroundColor: '#073b2d' }}
+      >
       {/* Top Branding */}
       <div>
         <div className="p-5 border-b border-emerald-950/60 flex items-center justify-between">
@@ -170,7 +187,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#c89b55] to-[#9c7536] flex items-center justify-center text-white font-black text-xl shadow-md shrink-0">
               ARF
             </div>
-            {!collapsed && (
+            {!compact && (
               <div className="leading-tight truncate">
                 <h1 className="font-bold text-white text-base tracking-wide flex items-center gap-1.5">
                   ARF One School <span className="text-[10px] bg-[#c89b55]/20 text-[#c89b55] px-1.5 py-0.5 rounded font-mono font-medium">Wave 1</span>
@@ -181,15 +198,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
           <button
             onClick={onToggleCollapse}
-            className="p-1.5 rounded-lg text-emerald-200/60 hover:text-white hover:bg-emerald-900/60 transition-colors"
+            className="hidden lg:inline-flex p-1.5 rounded-lg text-emerald-200/60 hover:text-white hover:bg-emerald-900/60 transition-colors"
             title={collapsed ? 'Perluas Menu' : 'Perkecil Menu'}
           >
             <ChevronRight className={`w-4 h-4 transition-transform ${collapsed ? '' : 'rotate-180'}`} />
           </button>
+          <button type="button" onClick={onCloseMobile}
+            aria-label="Tutup menu"
+            className="lg:hidden rounded-lg p-2 text-emerald-100 hover:bg-emerald-900/60">
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
         {/* Tagline Banner */}
-        {!collapsed && (
+        {!compact && (
           <div className="px-5 py-2.5 bg-emerald-950/40 border-b border-emerald-950/60 text-[10px] text-emerald-300/80 font-medium tracking-wide flex items-center gap-1.5">
             <Sparkles className="w-3 h-3 text-[#c89b55]" />
             <span>One Foundation. One Standard. Better Schools.</span>
@@ -204,7 +226,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
             return (
               <div key={secIdx} className="space-y-1">
-                {!collapsed && (
+                {!compact && (
                   <h3 className="px-3 text-[10px] font-bold text-emerald-400/60 uppercase tracking-wider mb-1.5">
                     {sec.title}
                   </h3>
@@ -222,10 +244,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           ? 'bg-[#c89b55] text-white shadow-sm font-semibold'
                           : 'text-emerald-100/80 hover:bg-emerald-900/50 hover:text-white'
                       }`}
-                      title={collapsed ? item.label : undefined}
+                      title={compact ? item.label : undefined}
                     >
                       <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-emerald-300/70'}`} />
-                      {!collapsed && <span className="truncate">{item.label}</span>}
+                      {!compact && <span className="truncate">{item.label}</span>}
                     </button>
                   );
                 })}
@@ -247,7 +269,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           title="Pengaturan Akun"
         >
           <Settings className="w-4 h-4 shrink-0" />
-          {!collapsed && <span className="truncate">Pengaturan Akun</span>}
+          {!compact && <span className="truncate">Pengaturan Akun</span>}
         </button>
 
         <button
@@ -256,9 +278,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
           title="Keluar"
         >
           <LogOut className="w-4 h-4 shrink-0" />
-          {!collapsed && <span className="truncate">Keluar Sistem</span>}
+          {!compact && <span className="truncate">Keluar Sistem</span>}
         </button>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 };
