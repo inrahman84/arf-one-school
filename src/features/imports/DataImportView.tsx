@@ -21,6 +21,8 @@ import { hrService } from '../../services/hrService';
 import { assetsService } from '../../services/assetsService';
 import { facilitiesService } from '../../services/facilitiesService';
 import { useAuth } from '../../context/AuthContext';
+import { useAcademicYears } from '../../hooks/useAcademicYears';
+import { academicYearsService } from '../../services/academicYearsService';
 
 interface DataImportViewProps {
   schools: School[];
@@ -36,6 +38,7 @@ export const DataImportView: React.FC<DataImportViewProps> = ({
   onNavigateToTab
 }) => {
   const { hasSchoolAccess } = useAuth();
+  const {activeAcademicYear,masterConnected} = useAcademicYears();
   const [selectedModule, setSelectedModule] = useState<'ENROLLMENT' | 'HR' | 'ASSET' | 'FACILITY'>('ENROLLMENT');
   const [targetSchoolId, setTargetSchoolId] = useState<string>(schools[0]?.school_id || '');
   const [parsing, setParsing] = useState(false);
@@ -49,13 +52,17 @@ export const DataImportView: React.FC<DataImportViewProps> = ({
   const accessibleSchools = schools.filter(s => hasSchoolAccess(s.school_id));
 
   const handleDownloadTemplate = () => {
-    excelService.downloadTemplate(selectedModule);
+    excelService.downloadTemplate(selectedModule, activeAcademicYear||undefined);
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (selectedModule === 'ENROLLMENT' && (!masterConnected || !activeAcademicYear)) {
+      alert('Aktifkan Tahun Ajaran terlebih dahulu melalui Administrasi Sistem → Master Tahun Ajaran.');
+      return;
+    }
     if (!targetSchoolId) {
       alert('Pilih sekolah tujuan terlebih dahulu!');
       return;
@@ -71,7 +78,7 @@ export const DataImportView: React.FC<DataImportViewProps> = ({
 
       let result: ParseResult<any>;
       if (selectedModule === 'ENROLLMENT') {
-        result = excelService.validateClassRows(rawRows, targetSchoolId);
+        result = excelService.validateClassRows(rawRows, targetSchoolId, activeAcademicYear||undefined);
       } else if (selectedModule === 'HR') {
         result = excelService.validateStaffRows(rawRows, targetSchoolId);
       } else if (selectedModule === 'ASSET') {
@@ -90,6 +97,15 @@ export const DataImportView: React.FC<DataImportViewProps> = ({
 
   const handleExecuteImport = async () => {
     if (!parseResult || parseResult.validRows.length === 0) return;
+    if (selectedModule === 'ENROLLMENT') {
+      const current = await academicYearsService.loadAcademicYears();
+      if (!current.connected || !current.activeYear ||
+          parseResult.validRows.some(row=>row.academic_year!==current.activeYear)) {
+        alert('Tahun Ajaran aktif telah berubah atau tidak tersedia. Unggah ulang file dengan periode yang aktif.');
+        setParseResult(null);
+        return;
+      }
+    }
 
     setImporting(true);
     let count = 0;
