@@ -101,7 +101,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ schools,
       });
       setInviteModalOpen(false);
       loadData();
-      alert(`Undangan resmi telah dibuat untuk ${inviteForm.email}. Pengguna dapat langsung masuk dengan Google.`);
+      alert(`Email ${inviteForm.email} telah ditambahkan ke daftar undangan. Pengguna dapat mendaftar dengan email dan kata sandi pada halaman login ARF One School. Akses akan mengikuti peran serta lingkup sekolah yang telah ditetapkan.`);
     } catch (err: any) {
       alert(err.message || 'Gagal membuat undangan');
     } finally {
@@ -149,7 +149,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ schools,
 
   const handleToggleDeactivate = async (user: UserProfile) => {
     const isDeactivating = user.status === 'ACTIVE';
-    const actionText = isDeactivating ? 'Nonaktifkan' : 'Aktifkan Kembali';
+    const actionText = isDeactivating ? 'Nonaktifkan' : (user.status === 'INVITED' ? 'Setujui & Aktifkan' : 'Aktifkan Kembali');
     if (confirm(`${actionText} akun ${user.email}?`)) {
       await authService.updateUserStatus(user.uid, isDeactivating ? 'INACTIVE' : 'ACTIVE');
       loadData();
@@ -312,7 +312,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ schools,
                           <button
                             onClick={() => handleToggleDeactivate(user)}
                             className="p-1 rounded hover:bg-rose-50 text-gray-400 hover:text-rose-600"
-                            title={user.status === 'ACTIVE' ? 'Nonaktifkan Akun' : 'Aktifkan Akun'}
+                            title={user.status === 'ACTIVE' ? 'Nonaktifkan Akun' : user.status === 'INVITED' ? 'Setujui Pendaftaran Pengguna' : 'Aktifkan Akun'}
                           >
                             <UserX className="w-3.5 h-3.5" />
                           </button>
