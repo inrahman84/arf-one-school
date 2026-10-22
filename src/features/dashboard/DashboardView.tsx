@@ -338,12 +338,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               className="w-full text-xs py-1.5 px-2.5 rounded-lg border border-gray-300 bg-white text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#073b2d]"
             >
               <option value="ALL">Semua Jenjang</option>
-              <option value="TPA">TPA</option>
-              <option value="PAUD">PAUD</option>
-              <option value="TK">TK</option>
-              <option value="SD">SD</option>
-              <option value="SMP">SMP</option>
-              <option value="SMK">SMK</option>
+              {EDUCATION_LEVELS.map(level => <option key={level} value={level}>{level}</option>)}
             </select>
           </div>
 
