@@ -1,7 +1,7 @@
 # ARF One School
 
 **Abdul Rasyid Foundation — School Management & Performance Dashboard**  
-Migration build for Vercel + Supabase (PostgreSQL, Auth, Storage).
+Production application on Vercel + Supabase (PostgreSQL, Auth, Storage).
 
 This source code is derived from the latest uploaded ARF Dashboard V1.1 photo-upload version. It keeps the original school-management screens and moves persistence from Firebase to the user's connected Supabase project.
 
@@ -41,7 +41,7 @@ VITE_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLIC_PUBLISHABLE_KEY
 
 ## Deployment Vercel
 
-Baca `PANDUAN-VERCEL-ARF-ONE-SCHOOL.md` untuk petunjuk impor source code, konfigurasi Vercel, URL Auth, dan checklist pengujian. ZIP ini dapat langsung digunakan sebagai source repository GitHub baru. Deploy Vercel belum dilakukan secara otomatis karena koneksi Vercel belum aktif dalam sesi ini.
+Aplikasi production: https://arf-one-school.vercel.app/. Repository GitHub `inrahman84/arf-one-school` telah terhubung ke proyek Vercel `arf-one-school`. Baca `PANDUAN-VERCEL-ARF-ONE-SCHOOL.md` untuk panduan konfigurasi Auth, Environment Variables, dan checklist pengujian.
 
 ## Keamanan
 
@@ -54,4 +54,11 @@ Baca `PANDUAN-VERCEL-ARF-ONE-SCHOOL.md` untuk petunjuk impor source code, konfig
 
 ## Pengujian
 
-`npm test` menjalankan pengujian struktur source code dan konfigurasi backend. Validasi koneksi Supabase dan RLS sudah dilakukan di lingkungan Supabase. **Build frontend penuh dan uji browser di Vercel belum dijalankan** karena registri paket npm tidak dapat diakses dari lingkungan pembuatan ZIP.
+`npm test` menjalankan pengujian struktur source code dan konfigurasi backend. Validasi koneksi Supabase dan RLS sudah dilakukan di lingkungan Supabase. Build Vite, pemeriksaan TypeScript dan tes regresi dijalankan otomatis oleh GitHub Actions pada setiap push. Pengujian interaksi langsung dengan akun nyata melalui browser tetap perlu dilakukan.
+
+## Pembaruan Antarmuka dan Master Sekolah — Oktober 2026
+
+- Antarmuka menyesuaikan smartphone, tablet dan komputer: navigasi drawer pada layar kecil, form modal adaptif, tabel dapat digeser horizontal.
+- Status operasional yang tersedia untuk input baru: **Aktif Memiliki Izin Operasional**, **Aktif Tidak Memiliki Izin Operasional**, dan **Tidak Aktif**. Status lama tetap terbaca; tidak dipetakan otomatis ke status perizinan baru.
+- Nama Kepala Sekolah pada formulir Tambah/Edit berasal dari pilihan Guru/Kepala Sekolah aktif di **sekolah yang sama**. Tersimpan sebagai pasangan ID PTK dan nama; sekolah tetap dapat dibuat sebelum PTK dimasukkan.
+- Panduan terperinci: [UPDATE-RESPONSIVE-STATUS-PTK.md](./UPDATE-RESPONSIVE-STATUS-PTK.md).
