@@ -31,7 +31,6 @@ import { hrService } from './services/hrService';
 import { assetsService } from './services/assetsService';
 import { facilitiesService } from './services/facilitiesService';
 import { verificationService } from './services/verificationService';
-import { seedService } from './services/seedService';
 import {
   School,
   Region,
@@ -70,33 +69,8 @@ const MainAppContent: React.FC = () => {
         verificationService.getAllReviews()
       ]);
 
-      // If database is completely empty on initial run, auto-seed realistic ARF data
-      if (rList.length === 0 && sList.length === 0) {
-        console.log('Database empty, auto-bootstrapping initial institutional ARF data...');
-        await seedService.bootstrapInstitutionalData();
-        const [seededR, seededS, seededRev] = await Promise.all([
-          regionsService.getRegions(),
-          schoolsService.getSchools(),
-          verificationService.getAllReviews()
-        ]);
-        setRegions(seededR);
-        setSchools(seededS);
-        setReviews(seededRev);
-
-        const schoolIds = seededS.map(s => s.school_id);
-        const [cList, stList, aList, fList] = await Promise.all([
-          enrollmentService.getAllClassesAcrossSchools(schoolIds),
-          hrService.getAllStaffAcrossSchools(schoolIds),
-          assetsService.getAllAssetsAcrossSchools(schoolIds),
-          facilitiesService.getAllFacilitiesAcrossSchools(schoolIds)
-        ]);
-        setClasses(cList);
-        setStaff(stList);
-        setAssets(aList);
-        setFacilities(fList);
-        return;
-      }
-
+      // Production data must come from real entries or verified imports, not fabricated demo records.
+      // An empty installation is a valid, clean initial state.
       setRegions(rList);
       setSchools(sList);
       setReviews(revList);
