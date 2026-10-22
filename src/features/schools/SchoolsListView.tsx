@@ -156,6 +156,10 @@ export const SchoolsListView: React.FC<SchoolsListViewProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (formData.education_level === 'PAUD') {
+      setFormError('Jenjang PAUD adalah data lama. Pilih salah satu dari TPA, KB, TK, SD, SMP, SMA, atau SMK sebelum menyimpan.');
+      return;
+    }
     setFormError(null);
     if (!formData.school_name || !formData.regional_id) {
       setFormError('Nama Sekolah dan Wilayah/Regional wajib diisi!');
