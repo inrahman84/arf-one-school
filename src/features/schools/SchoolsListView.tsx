@@ -12,7 +12,7 @@ import {
   Building,
   GraduationCap
 } from 'lucide-react';
-import { School, Region, EducationLevel, OperationalStatus, AccreditationGrade } from '../../types';
+import { School, Region, EducationLevel, EDUCATION_LEVELS, OperationalStatus, AccreditationGrade } from '../../types';
 import { schoolsService } from '../../services/schoolsService';
 import { useAuth } from '../../context/AuthContext';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
@@ -240,12 +240,7 @@ export const SchoolsListView: React.FC<SchoolsListViewProps> = ({
             className="text-xs py-2 px-3 rounded-lg border border-gray-300 bg-white text-gray-800"
           >
             <option value="ALL">Semua Jenjang</option>
-            <option value="TPA">TPA</option>
-            <option value="PAUD">PAUD</option>
-            <option value="TK">TK</option>
-            <option value="SD">SD</option>
-            <option value="SMP">SMP</option>
-            <option value="SMK">SMK</option>
+            {EDUCATION_LEVELS.map(level => <option key={level} value={level}>{level}</option>)}
           </select>
 
           {/* Filter desa/kelurahan dari master sekolah (tidak memerlukan tabel referensi tambahan) */}
@@ -447,12 +442,8 @@ export const SchoolsListView: React.FC<SchoolsListViewProps> = ({
                     className="w-full text-xs p-2 rounded-lg border border-gray-300"
                     required
                   >
-                    <option value="TPA">TPA</option>
-                    <option value="PAUD">PAUD</option>
-                    <option value="TK">TK</option>
-                    <option value="SD">SD</option>
-                    <option value="SMP">SMP</option>
-                    <option value="SMK">SMK</option>
+                    {formData.education_level === 'PAUD' && <option value="PAUD" disabled>PAUD (data lama — pilih jenjang baru)</option>}
+                    {EDUCATION_LEVELS.map(level => <option key={level} value={level}>{level}</option>)}
                   </select>
                 </div>
 
