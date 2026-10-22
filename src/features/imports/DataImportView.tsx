@@ -52,6 +52,10 @@ export const DataImportView: React.FC<DataImportViewProps> = ({
   const accessibleSchools = schools.filter(s => hasSchoolAccess(s.school_id));
 
   const handleDownloadTemplate = () => {
+    if(selectedModule==='ENROLLMENT' && (!masterConnected || !activeAcademicYear)){
+      alert('Aktifkan Tahun Ajaran melalui Administrasi Sistem → Master Tahun Ajaran sebelum mengunduh template Rombel.');
+      return;
+    }
     excelService.downloadTemplate(selectedModule, activeAcademicYear||undefined);
   };
 
