@@ -35,3 +35,11 @@ Pola DIC `ARF/{SCHOOL_ID}/{CATEGORY}/{FUNDING}/{YEAR}/{SEQUENCE}`; PAID `ARF-A-0
 - Menambahkan **Nomor Aset** sebagai teks bebas opsional pada form, dapat diedit dan disimpan pada field `asset_number` di Supabase JSONB.
 - Nomor Aset tersedia dalam pencarian, daftar inventaris, dan ekspor Excel. Nomor ini **berbeda** dari kode permanen yang kelak diterbitkan melalui approval.
 - Data inventaris lama yang belum mempunyai `asset_number` tetap kompatibel; tidak perlu migrasi SQL.
+
+## Revisi Form Tambah/Edit — Penanggung Jawab dan Tautan Bukti Dokumen (22 Oktober 2026)
+
+- **ID Ruang / Lokasi Aset**, **Status Penguasaan/Kepemilikan Legal**, dan **Status Siklus Hidup** disembunyikan dari formulir; nilai historis yang tersimpan tetap dipertahankan. Isian bukti kepemilikan, kode aset eksternal, invoice, dan berita acara tetap tersedia.
+- **Penanggung Jawab** menjadi pilihan dari Guru & Tenaga Kependidikan **berstatus Aktif pada sekolah yang dipilih**. Simpan `custodian_id` (ID PTK) dan `custodian_name` (nama dari master PTK), dengan validasi ulang sebelum menyimpan. Bila belum ada PTK aktif, aset boleh disimpan tanpa penanggung jawab.
+- **Tautan Bukti Dokumen** mendukung **Tambah Link** dan **Hapus Link** satu per satu, tanpa menghapus bukti lama secara otomatis. Tautan divalidasi sebagai URL HTTPS, duplikasi ditolak, dan disimpan dalam field JSONB `document_urls: string[]` yang sudah ada.
+- Kedua paragraf informasi panjang tentang draft standar dan tautan PDF telah dihilangkan dari formulir. Penghapusan ini **tidak mengubah** alur DRAFT internal atau status pengesahan standar.
+- Tidak memerlukan migrasi SQL; field inventaris adalah dokumen JSONB yang sudah kompatibel.
