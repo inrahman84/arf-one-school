@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Plus,
   Search,
@@ -33,9 +33,10 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({
   const [selectedSchoolId, setSelectedSchoolId] = useState<string>('ALL');
   const [academicYear, setAcademicYear] = useState('2026/2027');
   const {
-    savedAcademicYears, setSavedAcademicYears,
+    savedAcademicYears, setSavedAcademicYears, activeAcademicYear: masterActiveYear,
     masterConnected, masterLoading, masterWarning, reloadAcademicYears
   } = useAcademicYears();
+  useEffect(() => { if(masterActiveYear) setAcademicYear(masterActiveYear); }, [masterActiveYear]);
   const [yearModalOpen, setYearModalOpen] = useState(false);
   const [newAcademicYearStart, setNewAcademicYearStart] = useState('2027');
   const [yearSaving, setYearSaving] = useState(false);
@@ -93,7 +94,7 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({
   const activeAcademicYear = academicYearOptions.includes(academicYear) ? academicYear : (academicYearOptions[0] || '');
   const linkedClassesCount = yearClassRecords.filter(c => normalizeAcademicYear(String(c.academic_year).replace(/-/g, '/')) === activeAcademicYear).length;
   const canDeleteSelectedYear = isSuperAdmin && masterConnected && !masterLoading &&
-    savedAcademicYears.includes(activeAcademicYear) && linkedClassesCount === 0;
+    savedAcademicYears.includes(activeAcademicYear) && activeAcademicYear !== masterActiveYear && linkedClassesCount === 0;
 
   const openYearModal = () => {
     if (!isSuperAdmin || !masterConnected) return;
@@ -164,7 +165,7 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({
     setFormData({
       class_id: `CLS-${Date.now().toString().slice(-6)}`,
       school_id: selectedSchoolId !== 'ALL' ? selectedSchoolId : (accessibleSchools[0]?.school_id || ''),
-      academic_year: activeAcademicYear,
+      academic_year: masterActiveYear || '',
       semester,
       grade_level: 'Kelas 1',
       class_name: '',
@@ -234,6 +235,10 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({
       return;
     }
 
+    if (!editingClass && (!masterConnected || !masterActiveYear || formData.academic_year !== masterActiveYear)) {
+      setFormError('Aktifkan Tahun Ajaran pada Administrasi Sistem → Master Tahun Ajaran sebelum menambahkan rombel.');
+      return;
+    }
     setSubmitting(true);
     try {
       await enrollmentService.saveClass({
@@ -317,9 +322,9 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({
                 {isSuperAdmin && <button type="button" onClick={onManageAcademicYears} className="font-semibold text-[#073b2d] underline">Pengaturan</button>}
               </span>
             )}
-            {masterConnected && <span>Periode: {activeAcademicYear || 'Belum dipilih'} · {semester}</span>}
+            {masterConnected && <span>Filter: {activeAcademicYear || 'Belum dipilih'} · {semester} · Tahun input aktif: <strong>{masterActiveYear || 'Belum ditetapkan'}</strong></span>}
           </div>
-          <button type="button" onClick={openAddModal} disabled={!accessibleSchools.length || !activeAcademicYear} className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-[#073b2d] px-4 text-xs font-semibold text-white shadow-sm hover:bg-[#0a4f3d] disabled:cursor-not-allowed disabled:opacity-50">
+          <button type="button" onClick={openAddModal} disabled={!accessibleSchools.length || !masterConnected || !masterActiveYear} className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-[#073b2d] px-4 text-xs font-semibold text-white shadow-sm hover:bg-[#0a4f3d] disabled:cursor-not-allowed disabled:opacity-50">
             <Plus className="h-4 w-4" /> Tambah Rombel Baru
           </button>
         </div>
