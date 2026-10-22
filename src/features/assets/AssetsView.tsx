@@ -318,6 +318,11 @@ const accessibleSchools = schools.filter(s => hasSchoolAccess(s.school_id));
       setFormError('Aset yang disahkan tidak boleh dikoreksi melalui form biasa. Diperlukan prosedur koreksi berotorisasi.');
       return;
     }
+    // Do not silently discard a link left in the input but not yet added.
+    if (newDocumentLink.trim()) {
+      setFormError('Klik Tambah Link untuk memasukkan tautan bukti dokumen sebelum menyimpan aset.');
+      return;
+    }
     let document_urls: string[];
     try { document_urls = parseAssetDocumentUrls(formData.document_links.join('\n')); }
     catch (error) { setFormError(error instanceof Error?error.message:'Tautan dokumen tidak valid.'); return; }
