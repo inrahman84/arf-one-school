@@ -1,9 +1,11 @@
-import { collection, deleteDoc, doc, getDocs, setDoc } from '../lib/documentStore';
+import { collection, deleteDoc, doc, getDoc, getDocs, setDoc } from '../lib/documentStore';
 import { db } from '../lib/backend';
 import { auditService } from './auditService';
 
 const COLLECTION = 'academicYears';
 const CACHE_KEY = 'arf_academic_years_master_v2';
+const ACTIVE_DOC_ID = '_active';
+const ACTIVE_CACHE_KEY = 'arf_active_academic_year_v1';
 
 /** Canonical format: four-digit start year and its immediate successor. */
 export function normalizeAcademicYear(input: string): string | null {
@@ -22,6 +24,7 @@ export function sortedAcademicYears(years: string[]): string[] {
 
 export interface AcademicYearsResult {
   years: string[];
+  activeYear: string | null;
   /** False means only cached master + existing class periods may be shown. */
   connected: boolean;
   warning: string | null;
@@ -36,6 +39,13 @@ function readCachedYears(): string[] {
   }
 }
 
+function cachedActiveYear(): string | null {
+  try {return normalizeAcademicYear(localStorage.getItem(ACTIVE_CACHE_KEY) || '');}
+  catch {return null;}
+}
+function cacheActiveYear(year: string | null) {
+  try {if(year)localStorage.setItem(ACTIVE_CACHE_KEY,year);else localStorage.removeItem(ACTIVE_CACHE_KEY);}catch{}
+}
 function cacheYears(years: string[]): void {
   try { localStorage.setItem(CACHE_KEY, JSON.stringify(sortedAcademicYears(years))); }
   catch { /* Caching is optional; Supabase remains authoritative. */ }
@@ -57,19 +67,48 @@ export const academicYearsService = {
   /** Loads the Supabase master, falling back to a local read-only snapshot, never blocking the classroom page. */
   async loadAcademicYears(): Promise<AcademicYearsResult> {
     try {
-      const snapshot = await getDocs(collection(db, COLLECTION));
-      const years = sortedAcademicYears(snapshot.docs.map(d =>
-        String(d.data().label || d.id.replace('-', '/'))
-      ));
+      const [snapshot, activeRecord] = await Promise.all([
+        getDocs(collection(db, COLLECTION)),
+        getDoc(doc(db,COLLECTION,ACTIVE_DOC_ID))
+      ]);
+      const years = sortedAcademicYears(snapshot.docs
+        .filter(d=>d.id !== ACTIVE_DOC_ID)
+        .map(d=>String(d.data().label || d.id.replace('-', '/'))));
+      const candidate = activeRecord.exists()
+        ? normalizeAcademicYear(String(activeRecord.data().activeYear||'')) : null;
+      const activeYear = candidate && years.includes(candidate) ? candidate : null;
       cacheYears(years);
-      return { years, connected: true, warning: null };
+      cacheActiveYear(activeYear);
+      return { years, activeYear, connected: true, warning: null };
     } catch (error) {
       console.warn('Master tahun ajaran gagal disinkronkan:', error);
       return {
         years: readCachedYears(),
+        activeYear: cachedActiveYear(),
         connected: false,
         warning: friendlySupabaseError(error, 'membaca Master Tahun Ajaran')
       };
+    }
+  },
+
+  /** One central pointer guarantees at most one selected academic year for new input. */
+  async activateAcademicYear(value: string): Promise<string> {
+    const label = normalizeAcademicYear(value);
+    if(!label)throw new Error('Tahun ajaran tidak valid.');
+    try {
+      const master=await getDoc(doc(db,COLLECTION,label.replace('/','-')));
+      if(!master.exists())throw new Error('Aktivasi hanya dapat dilakukan pada tahun ajaran yang sudah ada di Master.');
+      await setDoc(doc(db,COLLECTION,ACTIVE_DOC_ID),{
+        activeYear:label,
+        updatedAt:new Date().toISOString()
+      });
+      cacheActiveYear(label);
+      void auditService.log('ACTIVATE_ACADEMIC_YEAR','AcademicYear',ACTIVE_DOC_ID,undefined,
+        `Mengaktifkan Tahun Ajaran ${label} untuk pengisian data`).catch(console.warn);
+      return label;
+    } catch(error) {
+      if(error instanceof Error && error.message.includes('Aktivasi hanya'))throw error;
+      throw new Error(friendlySupabaseError(error,`mengaktifkan tahun ajaran ${label}`));
     }
   },
 
@@ -102,6 +141,10 @@ export const academicYearsService = {
     if (!label) throw new Error('Tahun ajaran tidak valid.');
     const id = label.replace('/', '-');
     try {
+      const active = await getDoc(doc(db,COLLECTION,ACTIVE_DOC_ID));
+      if(normalizeAcademicYear(String(active.data().activeYear||''))===label) {
+        throw new Error(`Tahun ajaran ${label} sedang aktif. Aktifkan tahun lain sebelum menghapusnya.`);
+      }
       const schoolsSnapshot = await getDocs(collection(db, 'schools'));
       let usedBy = 0;
       for (const school of schoolsSnapshot.docs) {
@@ -114,7 +157,7 @@ export const academicYearsService = {
         throw new Error(`Tahun ajaran ${label} masih digunakan oleh ${usedBy} rombel. Hapus tidak diizinkan untuk melindungi riwayat peserta didik.`);
       }
     } catch (error) {
-      if (error instanceof Error && error.message.includes('masih digunakan')) throw error;
+      if (error instanceof Error && (error.message.includes('masih digunakan') || error.message.includes('sedang aktif'))) throw error;
       throw new Error(friendlySupabaseError(error, `memeriksa keterkaitan rombel ${label}`));
     }
 
