@@ -12,9 +12,12 @@ import { auditService } from './auditService';
 
 /** Backward compatible: older regions without a sortOrder retain a stable position. */
 export function sortRegions(regions: Region[]): Region[] {
+  const originalOrder = [...regions].sort((a,b) =>
+    (a.createdAt||'').localeCompare(b.createdAt||'') || a.id.localeCompare(b.id));
+  const fallback = new Map(originalOrder.map((region,index)=>[region.id,index]));
   return [...regions].sort((a,b) => {
-    const aOrder = Number.isFinite(a.sortOrder) ? Number(a.sortOrder) : Number.MAX_SAFE_INTEGER;
-    const bOrder = Number.isFinite(b.sortOrder) ? Number(b.sortOrder) : Number.MAX_SAFE_INTEGER;
+    const aOrder = Number.isFinite(a.sortOrder) ? Number(a.sortOrder) : (fallback.get(a.id) ?? 0);
+    const bOrder = Number.isFinite(b.sortOrder) ? Number(b.sortOrder) : (fallback.get(b.id) ?? 0);
     return (aOrder-bOrder) || (a.createdAt||'').localeCompare(b.createdAt||'') || a.id.localeCompare(b.id);
   });
 }
