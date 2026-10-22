@@ -43,3 +43,14 @@ Pola DIC `ARF/{SCHOOL_ID}/{CATEGORY}/{FUNDING}/{YEAR}/{SEQUENCE}`; PAID `ARF-A-0
 - **Tautan Bukti Dokumen** mendukung **Tambah Link** dan **Hapus Link** satu per satu, tanpa menghapus bukti lama secara otomatis. Tautan divalidasi sebagai URL HTTPS, duplikasi ditolak, dan disimpan dalam field JSONB `document_urls: string[]` yang sudah ada.
 - Kedua paragraf informasi panjang tentang draft standar dan tautan PDF telah dihilangkan dari formulir. Penghapusan ini **tidak mengubah** alur DRAFT internal atau status pengesahan standar.
 - Tidak memerlukan migrasi SQL; field inventaris adalah dokumen JSONB yang sudah kompatibel.
+
+## Revisi Form — Kendaraan / TNBK dan penyederhanaan label
+
+- **Nomor Aset:** informasi tambahan di bawah isian dihapus.
+- **School ID:** menampilkan `school_id` dari pilihan sekolah saat ini; isian terpisah **School ID Saat Ini** dihapus. Data asal/saat ini tetap disimpan untuk kebutuhan riwayat aset.
+- Informasi penjelasan di bawah **Nomor Seri** dan **Rincian Sumber Dana/Dasar Perolehan** dihapus dari formulir tanpa menonaktifkan validasi yang mendasarinya.
+- Apabila **Kategori Aset = KND (Kendaraan)**, formulir menampilkan **TNBK / Nomor Polisi** (contoh `KH 1234 AB`), dan menyembunyikan isian **Serial Number / Nomor Seri**. Untuk kategori lain, isian nomor seri tetap tersedia.
+- TNBK disimpan di field JSONB `tnbk` yang terpisah dari `serial_number`. Huruf dinormalisasi menjadi kapital dan spasi dirapikan ketika data disimpan. Nomor seri lama tidak dihapus ketika aset beralih kategori.
+- TNBK dapat digunakan untuk pencarian dan tersedia pada daftar serta ekspor inventaris. Duplikasi TNBK pada aset lain di sekolah yang sama dicegah oleh validasi formulir; pemeriksaan database transaksional terhadap benturan simultan membutuhkan perubahan backend terpisah.
+- Label **Model / Tipe Barang** menjadi **Model / Tipe**; label **Merk / Spesifikasi Singkat** menjadi **Spesifikasi Singkat**.
+- Tidak ada migrasi struktur SQL yang diperlukan karena register aset memakai kolom JSONB Supabase. Field `tnbk` bersifat opsional agar data lama tetap kompatibel.
