@@ -21,6 +21,7 @@ import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { PhotoUploadField } from '../../components/ui/PhotoUploadField';
 import { checkImageUploadReady, imageStorageService } from '../../services/imageStorageService';
 import {
+  normalizeTnbk,
   ARF_ASSET_CATEGORIES, ARF_FUNDING_CODES,
   categoryLabel, fundingLabel, validateDraftAssetInput, parseAssetDocumentUrls
 } from '../../lib/arfAssetCoding';
@@ -88,6 +89,7 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
     bundle_components: '',
     asset_brand: '',
     asset_model: '',
+    tnbk: '',
     serial_number: '',
     ownership_status: '',
     ownership_evidence: '',
@@ -171,6 +173,7 @@ const accessibleSchools = schools.filter(s => hasSchoolAccess(s.school_id));
         (a.permanent_asset_id || '').toLowerCase().includes(q) ||
         (a.display_inventory_code || '').toLowerCase().includes(q) ||
         (a.serial_number || '').toLowerCase().includes(q) ||
+        (a.tnbk || '').toLowerCase().includes(q) ||
         (a.asset_brand_spec || '').toLowerCase().includes(q)
       );
     }
@@ -200,6 +203,7 @@ const accessibleSchools = schools.filter(s => hasSchoolAccess(s.school_id));
       bundle_components: '',
       asset_brand: '',
       asset_model: '',
+    tnbk: '',
       serial_number: '',
       ownership_status: '',
       ownership_evidence: '',
@@ -254,6 +258,7 @@ const accessibleSchools = schools.filter(s => hasSchoolAccess(s.school_id));
       bundle_components: ast.bundle_components || '',
       asset_brand: ast.asset_brand || '',
       asset_model: ast.asset_model || '',
+      tnbk: ast.tnbk || '',
       serial_number: ast.serial_number || ast.asset_serial_number || '',
       ownership_status: ast.ownership_status || '',
       ownership_evidence: ast.ownership_evidence || '',
@@ -329,7 +334,8 @@ const accessibleSchools = schools.filter(s => hasSchoolAccess(s.school_id));
     const validation = validateDraftAssetInput({
       ...formData, document_urls,
       acquisition_year: formData.acquisition_year_unknown ? null : Number(formData.acquisition_year),
-      serial_number: formData.serial_number
+      serial_number: formData.category_code==='KND' ? undefined : formData.serial_number,
+      tnbk: formData.category_code==='KND' ? normalizeTnbk(formData.tnbk) : undefined
     },assets);
     if (validation) {setFormError(validation); return;}
     const custodian = formData.custodian_id
@@ -372,6 +378,7 @@ const accessibleSchools = schools.filter(s => hasSchoolAccess(s.school_id));
       await withTimeout(assetsService.saveAsset({
         ...draftFields,
         asset_number: formData.asset_number.trim(),
+        tnbk: formData.category_code === 'KND' ? normalizeTnbk(formData.tnbk) : (editingAsset?.tnbk || ''),
         custodian_id: custodian?.staff_id || '',
         custodian_name: custodian?.staff_name || '',
         origin_school_id: editingAsset?.origin_school_id || formData.school_id,
@@ -427,6 +434,7 @@ const accessibleSchools = schools.filter(s => hasSchoolAccess(s.school_id));
         'Kategori Kode': a.category_code || '-',
         'Kode Sumber Dana': a.funding_code || '-',
         'Nomor Seri': a.serial_number || a.asset_serial_number || '-',
+        'TNBK / Nomor Polisi': a.tnbk || '-',
         'Nomor Bukti Perolehan': a.invoice_ref || '-',
         'Nomor Berita Acara': a.handover_ref || '-',
         'Status Kepemilikan Legal': a.ownership_status || '-',
@@ -631,6 +639,7 @@ const accessibleSchools = schools.filter(s => hasSchoolAccess(s.school_id));
                     </td>
                     <td className="py-3 px-4">
                       <div className="font-bold text-gray-900">{ast.asset_name}</div>
+                      {ast.category_code === 'KND' && ast.tnbk && <div className="text-[11px] text-[#073b2d] font-medium">TNBK: {ast.tnbk}</div>}
                       {ast.asset_number && <div className="text-[11px] text-[#073b2d] font-semibold">Nomor Aset: {ast.asset_number}</div>}
                       <div className="text-[11px] text-gray-400 font-mono">{ast.display_inventory_code || ast.asset_code || ast.asset_id}</div>
                     </td>
@@ -760,20 +769,12 @@ const accessibleSchools = schools.filter(s => hasSchoolAccess(s.school_id));
                     placeholder="Masukkan nomor aset"
                     className="w-full text-xs p-2 rounded-lg border border-gray-300"
                   />
-                  <p className="mt-1 text-[11px] text-gray-500">Nomor aset untuk pencatatan internal. Tidak menggantikan kode inventaris permanen.</p>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">School ID Asal / Registrasi</label>
-                  <input readOnly value={formData.origin_school_id || formData.school_id}
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">School ID</label>
+                  <input readOnly value={formData.school_id}
                     className="w-full text-xs p-2 rounded-lg border border-gray-300 bg-gray-50 font-mono"/>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">School ID Saat Ini</label>
-                  <input readOnly value={formData.current_school_id || formData.school_id}
-                    className="w-full text-xs p-2 rounded-lg border border-gray-300 bg-gray-50 font-mono"/>
-                  <p className="mt-1 text-[11px] text-gray-500">Mutasi antar-sekolah harus melalui alur persetujuan terpisah.</p>
-                </div>
-
                 <div className="sm:col-span-2">
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Nama Barang / Aset *</label>
                   <input
@@ -792,7 +793,13 @@ const accessibleSchools = schools.filter(s => hasSchoolAccess(s.school_id));
                     value={formData.category_code}
                     onChange={(e) => {
                       const code=e.target.value;
-                      setFormData({ ...formData, category_code:code, asset_category: categoryLabel(code) as AssetCategory });
+                      setFormData(prev=>({
+                        ...prev,
+                        category_code: code,
+                        asset_category: categoryLabel(code) as AssetCategory,
+                        // Historical vehicle plates are retained when editing an older record.
+                        tnbk: code === 'KND' ? prev.tnbk : (editingAsset?.tnbk || '')
+                      }));
                     }}
                     className="w-full text-xs p-2 rounded-lg border border-gray-300"
                     required
@@ -810,21 +817,32 @@ const accessibleSchools = schools.filter(s => hasSchoolAccess(s.school_id));
                     className="w-full text-xs p-2 rounded-lg border border-gray-300" placeholder="Acer, Lenovo, Yamaha ..."/>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Model / Tipe Barang</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Model / Tipe</label>
                   <input type="text" value={formData.asset_model}
                     onChange={e=>setFormData({...formData,asset_model:e.target.value})}
                     className="w-full text-xs p-2 rounded-lg border border-gray-300" placeholder="Chromebook 311, dsb."/>
                 </div>
+                {formData.category_code === 'KND' ? (
+                  <div>
+                    <label htmlFor="arf-vehicle-plate" className="block text-xs font-semibold text-gray-700 mb-1">TNBK / Nomor Polisi</label>
+                    <input id="arf-vehicle-plate" type="text" autoCapitalize="characters" maxLength={20}
+                      value={formData.tnbk}
+                      onChange={e=>setFormData(prev=>({...prev,tnbk:e.target.value.toUpperCase()}))}
+                      onBlur={()=>setFormData(prev=>({...prev,tnbk:normalizeTnbk(prev.tnbk)}))}
+                      className="w-full text-xs p-2 rounded-lg border border-gray-300"
+                      placeholder="KH 1234 AB"/>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Serial Number / Nomor Seri</label>
+                    <input type="text" value={formData.serial_number}
+                      onChange={e=>setFormData({...formData,serial_number:e.target.value})}
+                      className="w-full text-xs p-2 rounded-lg border border-gray-300"
+                      placeholder="Nomor seri jika tersedia"/>
+                  </div>
+                )}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Serial Number / Nomor Seri</label>
-                  <input type="text" value={formData.serial_number}
-                    onChange={e=>setFormData({...formData,serial_number:e.target.value})}
-                    className="w-full text-xs p-2 rounded-lg border border-gray-300"
-                    placeholder="Nomor seri jika tersedia"/>
-                  <p className="mt-1 text-[11px] text-gray-500">Diperiksa terhadap nomor seri aset lain di sekolah yang sama.</p>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Merk / Spesifikasi Singkat</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Spesifikasi Singkat</label>
                   <input
                     type="text"
                     value={formData.asset_brand_spec}
@@ -913,10 +931,6 @@ const accessibleSchools = schools.filter(s => hasSchoolAccess(s.school_id));
                     onChange={e=>setFormData({...formData,funding_details:e.target.value})}
                     className="w-full text-xs p-2 rounded-lg border border-gray-300"
                     placeholder="Program/kegiatan, tahun anggaran, pemberi bantuan, nomor persetujuan, atau alasan kode LGC."/>
-                  <p className="text-[11px] text-gray-500 mt-1">
-                    Kode sumber dana harus didukung bukti perolehan. LGC hanya untuk sensus/migrasi aset lama.
-                    Pendanaan gabungan tidak disediakan pada form ini karena panduan memuat larangan penggunaannya.
-                  </p>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Harga Satuan Perolehan (Rp)</label>
