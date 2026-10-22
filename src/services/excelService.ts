@@ -25,7 +25,7 @@ export const excelService = {
   },
 
   // 1. Download official ARF templates
-  downloadTemplate(module: 'SCHOOL' | 'ENROLLMENT' | 'HR' | 'ASSET' | 'FACILITY') {
+  downloadTemplate(module: 'SCHOOL' | 'ENROLLMENT' | 'HR' | 'ASSET' | 'FACILITY', activeYear?: string) {
     const wb = XLSX.utils.book_new();
 
     if (module === 'SCHOOL') {
@@ -53,7 +53,7 @@ export const excelService = {
         {
           'ID Kelas (Wajib)': 'CLS-1A-2026',
           'ID Sekolah (Wajib)': 'SCH-KTG-01',
-          'Tahun Ajaran (Wajib)': '2026/2027',
+          'Tahun Ajaran (Wajib)': activeYear || '2026/2027',
           'Semester (Ganjil/Genap)': 'Ganjil',
           'Tingkat Kelas': 'Kelas 1',
           'Nama Rombel (Wajib)': 'Kelas 1A Cendekia',
@@ -154,7 +154,7 @@ export const excelService = {
   },
 
   // Validate Classrooms
-  validateClassRows(rawRows: any[], targetSchoolId: string): ParseResult<ClassroomEnrollment> {
+  validateClassRows(rawRows: any[], targetSchoolId: string, activeYear?: string): ParseResult<ClassroomEnrollment> {
     const validRows: ClassroomEnrollment[] = [];
     const invalidRows: { rowNumber: number; data: any; errors: string[] }[] = [];
     const seenIds = new Set<string>();
@@ -166,7 +166,7 @@ export const excelService = {
 
       const classId = String(row['ID Kelas (Wajib)'] || row['class_id'] || '').trim();
       const schoolId = String(row['ID Sekolah (Wajib)'] || row['school_id'] || targetSchoolId).trim();
-      const academicYear = String(row['Tahun Ajaran (Wajib)'] || row['academic_year'] || '2026/2027').trim();
+      const academicYear = String(row['Tahun Ajaran (Wajib)'] || row['academic_year'] || activeYear || '').trim();
       const semester = (String(row['Semester (Ganjil/Genap)'] || row['semester'] || 'Ganjil').trim() === 'Genap') ? 'Genap' : 'Ganjil';
       const className = String(row['Nama Rombel (Wajib)'] || row['class_name'] || '').trim();
       const gradeLevel = String(row['Tingkat Kelas'] || row['grade_level'] || 'Kelas 1').trim();
@@ -174,6 +174,8 @@ export const excelService = {
       const male = Number(row['Siswa Laki-laki'] || row['male_students'] || 0);
       const female = Number(row['Siswa Perempuan'] || row['female_students'] || 0);
 
+      if (!academicYear) errors.push('Tahun Ajaran wajib diisi');
+      if (activeYear && academicYear !== activeYear) errors.push(`Tahun Ajaran harus sesuai periode aktif ${activeYear}`);
       if (!classId) errors.push('ID Kelas wajib diisi');
       if (!className) errors.push('Nama Rombel wajib diisi');
       if (capacity <= 0) errors.push('Kapasitas rombel harus lebih dari 0');
