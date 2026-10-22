@@ -4,7 +4,7 @@ import {
   getDocs,
   getDoc,
   setDoc,
-  deleteDoc
+  updateDoc
 } from '../lib/documentStore';
 import { db, handleSupabaseError, OperationType } from '../lib/backend';
 import { Asset } from '../types';
@@ -42,11 +42,30 @@ export const assetsService = {
     const path = `schools/${as.school_id}/assets/${as.asset_id}`;
     try {
       const now = new Date().toISOString();
+      const existing=await getDoc(doc(db,'schools',as.school_id,'assets',as.asset_id));
+      const prior=existing.exists()?existing.data() as Asset:null;
+      if (prior?.registration_status === 'APPROVED') {
+        throw new Error('Aset yang sudah disahkan tidak boleh diubah melalui formulir biasa. Ajukan koreksi berotorisasi.');
+      }
+      // PAID/DIC are never issued on a browser save. Preserve historical identifiers,
+      // and refuse to create or overwrite identities through the draft-edit endpoint.
+      if (prior?.permanent_asset_id && as.permanent_asset_id!==prior.permanent_asset_id) {
+        throw new Error('Permanent Asset ID bersifat tetap dan tidak dapat diubah.');
+      }
+      if (prior?.display_inventory_code && as.display_inventory_code!==prior.display_inventory_code) {
+        throw new Error('Display Inventory Code tidak dapat diubah melalui form.');
+      }
+      if (!prior && (as.permanent_asset_id || as.display_inventory_code)) {
+        throw new Error('Nomor PAID/DIC hanya bisa diterbitkan setelah approval oleh layanan server.');
+      }
+      if (prior?.origin_school_id && prior.origin_school_id !== (as.origin_school_id||as.school_id)) {
+        throw new Error('School ID asal registrasi tidak dapat diubah.');
+      }
       const payload: Asset = {
         ...as,
         quantity: Number(as.quantity) || 1,
         acquisition_unit_value: Number(as.acquisition_unit_value) || 0,
-        funding_year: as.funding_year ? Number(as.funding_year) : new Date().getFullYear(),
+        funding_year: as.funding_year ? Number(as.funding_year) : undefined,
         created_at: as.created_at || now,
         updated_at: now
       };
@@ -57,19 +76,37 @@ export const assetsService = {
     }
   },
 
+  /** Historical inventory entries remain in the ledger; deletion is a soft archival action.
+   * Disposal/asset write-off is a separate legal approval process. */
   async deleteAsset(schoolId: string, assetId: string): Promise<void> {
-    const path = `schools/${schoolId}/assets/${assetId}`;
+    const path=`schools/${schoolId}/assets/${assetId}`;
     try {
-      const assetRef = doc(db, 'schools', schoolId, 'assets', assetId);
-      // Read the image path before deleting its Supabase metadata.
-      const snap = await getDoc(assetRef);
-      const photoPath = snap.exists() ? (snap.data() as Asset).image_path : undefined;
-      await deleteDoc(assetRef);
-      await imageStorageService.cleanupImages([photoPath]);
-      await auditService.log('DELETE_ASSET', 'Asset', assetId, schoolId, `Menghapus aset ${assetId}`).catch(error => console.warn('Audit hapus aset gagal:', error));
-    } catch (error) {
-      handleSupabaseError(error, OperationType.DELETE, path);
+      const assetRef=doc(db,'schools',schoolId,'assets',assetId);
+      const snap=await getDoc(assetRef);
+      if(!snap.exists()) throw new Error('Aset tidak ditemukan.');
+      const item=snap.data() as Asset;
+      if(item.registration_status==='APPROVED'){
+        throw new Error('Aset disahkan tidak dapat diarsipkan tanpa prosedur persetujuan aset.');
+      }
+      await updateDoc(assetRef,{
+        archived_at:new Date().toISOString(), updated_at:new Date().toISOString()
+      });
+      void auditService.log('ARCHIVE_ASSET','Asset',assetId,schoolId,'Aset draft diarsipkan; riwayat dan foto tetap disimpan.').catch(console.warn);
+    }catch(error){
+      if(error instanceof Error && /tidak ditemukan|tidak dapat diarsipkan/.test(error.message))throw error;
+      handleSupabaseError(error,OperationType.UPDATE,path);
     }
+  },
+
+  /** Archived drafts remain recoverable and do not reuse their record IDs. */
+  async restoreArchivedDraft(schoolId:string,assetId:string):Promise<void>{
+    const ref=doc(db,'schools',schoolId,'assets',assetId);
+    const snap=await getDoc(ref);
+    if(!snap.exists())throw new Error('Aset tidak ditemukan.');
+    const item=snap.data() as Asset;
+    if(item.registration_status==='APPROVED')throw new Error('Aset disahkan memerlukan otorisasi khusus.');
+    await updateDoc(ref,{archived_at:'',updated_at:new Date().toISOString()});
+    void auditService.log('RESTORE_ASSET','Asset',assetId,schoolId,'Draft aset dikembalikan dari arsip').catch(console.warn);
   },
 
   calculateAssetMetrics(assets: Asset[]) {
@@ -94,7 +131,7 @@ export const assetsService = {
 
     const byCategory: Record<string, number> = {};
 
-    assets.forEach(a => {
+    assets.filter(a=>!a.archived_at).forEach(a => {
       const qty = Number(a.quantity) || 0;
       const val = (Number(a.acquisition_unit_value) || 0) * qty;
 
