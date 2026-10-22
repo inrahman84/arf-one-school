@@ -132,7 +132,7 @@ export const RegionManagementView: React.FC<RegionManagementViewProps> = ({
     try {
       await regionsService.saveRegion({
         ...formData,
-        sortOrder: editingRegion?.sortOrder ?? (Math.max(-1,...regions.map(r => Number.isFinite(r.sortOrder) ? Number(r.sortOrder) : -1)) + 1),
+        sortOrder: editingRegion?.sortOrder ?? (Math.max(regions.length-1,...regions.map(r => Number.isFinite(r.sortOrder) ? Number(r.sortOrder) : -1)) + 1),
         createdAt: editingRegion ? editingRegion.createdAt : new Date().toISOString()
       });
       setModalOpen(false);
