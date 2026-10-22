@@ -8,7 +8,8 @@ import {
   RefreshCw,
   Eye,
   CheckCircle2,
-  Building
+  Building,
+  Menu
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { UserRole } from '../../types';
@@ -18,9 +19,10 @@ interface HeaderProps {
   pageTitle: string;
   pageSubtitle?: string;
   onDataRefresh?: () => void;
+  onMenuToggle?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ pageTitle, pageSubtitle, onDataRefresh }) => {
+export const Header: React.FC<HeaderProps> = ({ pageTitle, pageSubtitle, onDataRefresh, onMenuToggle }) => {
   const {
     currentUser,
     userProfile,
@@ -59,19 +61,27 @@ export const Header: React.FC<HeaderProps> = ({ pageTitle, pageSubtitle, onDataR
 
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-xs">
-      <div className="px-6 py-3.5 flex items-center justify-between">
-        {/* Title & Subtitle */}
-        <div>
-          <h2 className="text-xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
+      <div className="px-3 py-3 sm:px-5 lg:px-6 sm:py-3.5 flex flex-wrap items-center justify-between gap-3">
+        {/* Mobile navigation trigger and adaptive title */}
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <button type="button" onClick={onMenuToggle}
+            aria-label="Buka menu navigasi"
+            aria-controls="arf-mobile-nav"
+            className="lg:hidden mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-gray-50 text-[#073b2d] hover:bg-gray-100">
+            <Menu className="h-5 w-5" />
+          </button>
+          <div className="min-w-0">
+          <h2 className="text-base leading-snug sm:text-xl font-bold text-gray-900 tracking-tight break-words">
             {pageTitle}
           </h2>
           {pageSubtitle && (
-            <p className="text-xs text-[#5f5d5d] mt-0.5 font-medium">{pageSubtitle}</p>
+            <p className="text-[11px] leading-relaxed sm:text-xs text-[#5f5d5d] mt-0.5 font-medium">{pageSubtitle}</p>
           )}
+          </div>
         </div>
 
         {/* Right side controls */}
-        <div className="flex items-center gap-3">
+        <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:gap-3 lg:w-auto">
           {/* Seed Initial Data Button (Instant bootstrap for evaluators) */}
           {import.meta.env.DEV && <button
             onClick={handleSeedData}
@@ -88,11 +98,11 @@ export const Header: React.FC<HeaderProps> = ({ pageTitle, pageSubtitle, onDataR
             <div className="relative">
               <button
                 onClick={() => setRoleMenuOpen(!roleMenuOpen)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-medium border border-gray-300 transition-colors"
+                className="flex max-w-full items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-medium border border-gray-300 transition-colors"
                 title="Ganti Mode Pengujian Peran (RBAC Preview)"
               >
                 <Eye className="w-3.5 h-3.5 text-[#3f6276]" />
-                <span>Simulasi:</span>
+                <span className="hidden sm:inline">Simulasi:</span>
                 <span className="font-bold text-[#073b2d]">
                   {roleLabels[effectiveRole]?.label || effectiveRole}
                 </span>
@@ -134,7 +144,7 @@ export const Header: React.FC<HeaderProps> = ({ pageTitle, pageSubtitle, onDataR
           )}
 
           {/* User Profile Info */}
-          <div className="flex items-center gap-3 pl-3 border-l border-gray-200">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3 pl-2 sm:pl-3 border-l border-gray-200">
             <div className="text-right leading-tight hidden sm:block">
               <div className="text-xs font-bold text-gray-900 truncate max-w-[150px]">
                 {userProfile?.displayName || currentUser?.displayName || 'Pengguna ARF'}
