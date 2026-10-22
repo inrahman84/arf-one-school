@@ -273,6 +273,11 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({
 
   return (
     <div className="space-y-6">
+      {!masterLoading && masterConnected && !masterActiveYear && (
+        <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">
+          Belum ada Tahun Ajaran aktif untuk pengisian data baru. Super Admin perlu memilih <strong>Aktifkan</strong> pada menu Administrasi Sistem → Master Tahun Ajaran.
+        </div>
+      )}
       {/* Consistent, responsive filter grid. Every field shares the same label + 40px control height. */}
       <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-xs space-y-3">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1.35fr)_minmax(0,1fr)_minmax(0,1.2fr)] xl:items-end">
