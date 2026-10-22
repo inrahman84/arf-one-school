@@ -82,7 +82,7 @@ export function validateDraftAssetInput(data:{
   }
   if(!Number.isFinite(data.acquisition_unit_value)||data.acquisition_unit_value<0)return 'Harga perolehan tidak valid.';
   if(!Number.isInteger(data.quantity)||data.quantity<1)return 'Jumlah aset tidak valid.';
-  if(data.registration_type!=='BUNDLE' && data.quantity!==1)return 'Aset individual harus dicatat per unit (quantity = 1).';
+  if(data.quantity!==1)return 'Setiap aset individual atau bundel tidak terpisahkan memiliki satu record (quantity = 1).';
   if(data.registration_type==='BUNDLE' && !data.bundle_components?.trim())return 'Aset bundel wajib mencantumkan rincian komponennya.';
   const serial=data.serial_number?.trim().toLowerCase();
   if(serial && others.some(a=>a.asset_id!==data.asset_id && a.school_id===data.school_id &&
