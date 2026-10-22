@@ -9,16 +9,23 @@ test('Master kategori mengikuti 12 kode ARF dan funding 7 kode',()=>{
   for(const code of ['BK','BR','DAK','BDA','ARF','OTH','LGC'])assert.match(src,new RegExp("code:'"+code+"'"));
   assert.doesNotMatch(src,/code:'MIX'/);
 });
-test('Draft form cannot type PAID or inventory code',()=>{
+test('Tambah/Edit Aset hides PAID, DIC and registration status; Nomor Aset is editable',()=>{
   const src=read('src/features/assets/AssetsView.tsx');
-  assert.match(src,/Permanent Asset ID \(PAID\)/);
-  assert.match(src,/Display Inventory Code \(DIC\)/);
-  assert.match(src,/value=\{formData\.permanent_asset_id \|\|/);
-  assert.match(src,/value=\{formData\.display_inventory_code \|\|/);
-  assert.doesNotMatch(src,/onChange=\{\(e\) => setFormData\(\{ \.\.\.formData, asset_code:/);
+  const types=read('src/types/index.ts');
+  assert.doesNotMatch(src,/>Permanent Asset ID \(PAID\)<\/label>/);
+  assert.doesNotMatch(src,/>Display Inventory Code \(DIC\)<\/label>/);
+  assert.doesNotMatch(src,/>Status Registrasi<\/label>/);
+  assert.match(src,/>Nomor Aset<\/label>/);
+  assert.match(src,/value=\{formData\.asset_number\}/);
+  assert.match(src,/asset_number: ast\.asset_number \|\| ''/);
+  assert.match(src,/asset_number: formData\.asset_number\.trim\(\)/);
+  assert.match(src,/\(a\.asset_number \|\| ''\)\.toLowerCase\(\)\.includes\(q\)/);
+  assert.match(src,/'Nomor Aset': a\.asset_number/);
+  assert.match(types,/asset_number\?: string/);
   assert.match(src,/registration_status: 'DRAFT'/);
   assert.match(src,/crypto\.randomUUID\(\)/);
 });
+
 test('Form includes ARF register minimum inputs',()=>{
   const src=read('src/features/assets/AssetsView.tsx');
   for(const field of ['category_code','funding_code','funding_details','acquisition_date','acquisition_year_unknown',
