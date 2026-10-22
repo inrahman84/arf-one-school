@@ -184,6 +184,7 @@ export interface Asset {
   external_asset_code?: string;
   room_id?: string;
   custodian_id?: string;
+  custodian_name?: string; // Display name resolved from PTK when assigned
   lifecycle_status?: string;
   invoice_ref?: string;
   handover_ref?: string;
