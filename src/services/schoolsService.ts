@@ -52,8 +52,14 @@ export const schoolsService = {
   async deleteSchool(schoolId: string): Promise<void> {
     const path = `schools/${schoolId}`;
     try {
-      // Bersihkan seluruh subkoleksi terkait: rombel, PTK, aset, dan prasarana
-      const subcollections = ['classes', 'staff', 'assets', 'facilities'];
+      // Prevent accidental destruction of permanent asset histories, including archived drafts.
+      // ARF-STD-AST-001 requires ledger retention even after loss or disposal.
+      const assetRegister = await getDocs(collection(db,'schools',schoolId,'assets'));
+      if(!assetRegister.empty) {
+        throw new Error('Sekolah masih memiliki register inventaris. Data aset dan riwayat tidak boleh dihapus. Proses mutasi/arsip dan persetujuan terlebih dahulu.');
+      }
+      // Other school subcollections retain the pre-existing cleanup behavior.
+      const subcollections = ['classes', 'staff', 'facilities'];
       for (const sub of subcollections) {
         try {
           const subSnap = await getDocs(collection(db, 'schools', schoolId, sub));
@@ -69,6 +75,7 @@ export const schoolsService = {
       await deleteDoc(doc(db, 'schools', schoolId));
       await auditService.log('DELETE_SCHOOL', 'School', schoolId, schoolId, `Menghapus data sekolah: ${schoolId}`);
     } catch (error) {
+      if (error instanceof Error && error.message.includes('Sekolah masih memiliki register inventaris')) throw error;
       handleSupabaseError(error, OperationType.DELETE, path);
     }
   }
