@@ -39,7 +39,7 @@ export const excelService = {
           'Alamat Sekolah': 'Jl. Tjilik Riwut Km 4.5',
           'Kecamatan': 'Baamang',
           'Kabupaten/Kota': 'Kotawaringin Timur',
-          'Status Operasional (Aktif/Izin Operasional Baru/Menunggu Akreditasi/Nonaktif)': 'Aktif',
+          'Status Operasional (Aktif Memiliki Izin Operasional/Aktif Tidak Memiliki Izin Operasional/Tidak Aktif)': 'Aktif Memiliki Izin Operasional',
           'No Izin Operasional': '421.1/189/Disdik/2020',
           'Nilai Akreditasi (A/B/C/Belum Terakreditasi)': 'A',
           'Kapasitas Siswa Total': 400
