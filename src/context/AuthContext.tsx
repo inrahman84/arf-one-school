@@ -23,6 +23,7 @@ interface AuthContextType {
   loginWithGoogle: () => Promise<void>;
   loginWithEmail: (email: string) => Promise<void>;
   loginWithPassword: (email: string, password: string) => Promise<void>;
+  registerWithEmail: (email: string, password: string, name: string) => Promise<{confirmationRequired:boolean}>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -59,6 +60,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loginWithGoogle=async()=>{await authService.signInWithGoogle();};
   const loginWithEmail=async(email:string)=>{await authService.signInWithAuthorizedEmail(email);};
   const loginWithPassword=async(email:string,password:string)=>{await authService.signInWithPassword(email,password);};
+  const registerWithEmail=async(email:string,password:string,name:string)=>{
+    return authService.registerWithEmail(email,password,name);
+  };
   const logout=async()=>{await authService.signOutUser();setCurrentUser(null);setUserProfile(null);setSimulatedRole(null);};
   const refreshProfile=async()=>{if(!currentUser?.uid)return;const p=await authService.getUserProfile(currentUser.uid);if(p)setUserProfile(p);};
 
@@ -125,6 +129,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loginWithGoogle,
         loginWithEmail,
         loginWithPassword,
+        registerWithEmail,
         logout,
         refreshProfile
       }}
