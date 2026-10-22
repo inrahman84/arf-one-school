@@ -145,7 +145,7 @@ const MainAppContent: React.FC = () => {
     return <div className="min-h-screen flex items-center justify-center bg-[#f6f3ec] p-6">
       <div className="max-w-md bg-white rounded-2xl p-8 border border-gray-200 text-center shadow-sm space-y-4">
         <h2 className="text-lg font-bold text-[#073b2d]">Akses ARF One School belum aktif</h2>
-        <p className="text-sm text-gray-600">Akun <strong>{currentUser.email}</strong> berhasil diverifikasi oleh Supabase, tetapi belum mempunyai keanggotaan aktif. Hubungi Super Admin ARF.</p>
+        <p className="text-sm text-gray-600">Akun <strong>{currentUser.email}</strong> telah terautentikasi, tetapi keanggotaannya belum disetujui atau belum aktif. Super Admin harus menyetujui pendaftaran serta menetapkan hak akses melalui Administrasi Sistem → Manajemen Pengguna.</p>
         <button className="rounded-xl bg-[#073b2d] px-5 py-2.5 text-white" onClick={logout}>Keluar</button>
       </div>
     </div>;
