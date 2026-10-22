@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --arf-primary: #073b2d;
+    --arf-gray: #5f5d5d;
+    --arf-gold: #c89b55;
+    --arf-slate: #3f6276;
+    --arf-ivory: #f6f3ec;
+    --arf-success: #009b4c;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  }
+
+  body {
+    background-color: var(--arf-ivory);
+    color: #1f2937;
+    margin: 0;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Custom scrollbar for modern enterprise tables */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+  background: #c2c9d1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+@media print {
+  aside, nav, button, .no-print {
+    display: none !important;
+  }
+  body {
+    background: white !important;
+  }
+}

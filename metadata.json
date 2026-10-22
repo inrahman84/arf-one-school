@@ -1,0 +1,6 @@
+{
+  "name": "ARF One School",
+  "description": "Sistem Manajemen Sekolah & Dashboard Kinerja Abdul Rasyid Foundation (ARF) - One Foundation. One Standard. Better Schools.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

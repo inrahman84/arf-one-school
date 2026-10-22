@@ -1,0 +1,1181 @@
+You are a Senior Full-Stack Software Engineer, Firebase Architect, Data Management Specialist, UX/UI Designer, and Education Management Information System (EMIS) Expert.
+
+Build a complete, functional, production-oriented web application called:
+
+"ARF School Management & Performance Dashboard"
+
+Organization: Abdul Rasyid Foundation (ARF)
+Application version: 1.0 — Wave 1
+Tagline: One Foundation. One Standard. Better Schools.
+
+IMPORTANT:
+This must be a REAL, WORKING web application connected to Firebase, not merely a UI mockup or static dashboard.
+
+Generate and implement actual source code, Firebase integration, authentication, database operations, user management, Excel importing, form validation, and functional dashboards.
+
+Do not create fake CRUD operations, fake authentication, or dummy buttons. Every primary application function must be operational.
+
+All user-facing text must be in Bahasa Indonesia. Use clear, professional, institutional language.
+
+==================================================
+1. APPLICATION OBJECTIVE
+==================================================
+
+The application will be used by Abdul Rasyid Foundation to manage and monitor multiple schools located across different regions in Indonesia.
+
+The application must centralize school data and provide accurate insights for the Foundation Manager, regional leadership, school principals, and authorized school staff.
+
+Wave 1 focuses ONLY on:
+
+1. School Profile & Enrollment Management
+2. Human Resources & Teacher Management
+3. Facilities & Asset Management
+4. User Authentication & User Management
+5. Executive Dashboard & Reporting
+6. Data Import, Validation & Verification
+
+The architecture must be modular and extensible to support future education quality, learning outcomes, and school improvement modules.
+
+Do not build Wave 2 and Wave 3 yet.
+
+==================================================
+2. TECHNOLOGY STACK
+==================================================
+
+Use:
+
+Frontend:
+- React
+- TypeScript
+- Tailwind CSS
+- Responsive dashboard layout
+- Lucide React icons
+- Recharts for data visualizations
+- React Hook Form and Zod for validation
+- Reusable UI components
+
+Backend:
+- Firebase Authentication
+- Cloud Firestore
+- Firebase Security Rules
+- Firebase Admin SDK in trusted server-side code where required
+- Firebase Cloud Functions or securely authenticated server endpoints for privileged administrative operations
+
+Other libraries:
+- SheetJS or another maintained XLSX-compatible library for Excel imports
+- Date formatting for Indonesian locale
+- Data tables with searching, filtering, pagination, and sorting
+
+Use Google AI Studio's native Firebase integration.
+
+If Firebase integration is not enabled, request that I enable it through Google AI Studio instead of substituting a local or mock database.
+
+Use a consistent Firebase project for the application and deployment.
+
+Do not expose service account credentials or administrative secrets to frontend code.
+
+The application must use real Firestore persistence.
+
+==================================================
+3. USER INTERFACE AND BRAND DESIGN
+==================================================
+
+Create a premium, professional, minimalist dashboard suitable for an education foundation's executive management.
+
+The application must NOT look like a children's school website.
+
+Visual inspiration:
+- Executive management dashboard
+- Enterprise SaaS
+- Education intelligence platform
+- Modern institutional design
+- Clean analytics interface
+
+STRICT COLOR PALETTE:
+
+Primary Dark Green: #073b2d
+Neutral Gray: #5f5d5d
+Accent Gold: #c89b55
+Slate Blue: #3f6276
+Warm Ivory: #f6f3ec
+Success Green: #009b4c
+
+Usage:
+
+#073b2d
+- Main sidebar background
+- Primary action buttons
+- Main navigation
+- Important headings
+
+#5f5d5d
+- Secondary body text
+- Metadata
+- Table descriptions
+
+#c89b55
+- Selected navigation accents
+- Executive highlights
+- Important visual details
+
+#3f6276
+- Secondary buttons
+- Analytical charts
+- Informational indicators
+
+#f6f3ec
+- Main application background
+- Light section surfaces
+
+#009b4c
+- Positive performance indicators
+- Success notifications
+- Verified status
+- Healthy asset conditions
+
+Use white for cards and high-contrast content surfaces where appropriate.
+
+Use typography similar to Inter or Plus Jakarta Sans.
+
+Design characteristics:
+- Collapsible dark green sidebar
+- Professional top navigation
+- White dashboard cards
+- Subtle borders and shadows
+- Generous whitespace
+- Consistent rounded corners
+- Modern data tables
+- Responsive charts
+- Elegant loading skeletons
+- Clear empty and error states
+- Toast notifications
+- Accessible contrast ratios
+- Desktop-first design with responsive mobile support
+
+Use English for short technical module names if useful, but every explanation, input label, button, navigation item, validation error, and notification must be in Bahasa Indonesia.
+
+==================================================
+4. AUTHENTICATION SYSTEM
+==================================================
+
+Implement Firebase Authentication.
+
+Primary login method:
+Google Sign-In using Firebase Authentication.
+
+Access must be restricted to authorized ARF users.
+
+Do not allow unrestricted public registration.
+
+Implement administrator-managed user invitations and account provisioning.
+
+Workflow:
+
+1. Super Admin logs into the application.
+2. Super Admin opens "Manajemen Pengguna".
+3. Super Admin clicks "Tambah Pengguna".
+4. Admin enters:
+   - Nama lengkap
+   - Email
+   - Jabatan
+   - Role pengguna
+   - Regional yang ditugaskan
+   - Sekolah yang ditugaskan
+   - Status akun
+5. The system creates a secure invitation or user authorization record.
+6. Invited users can sign in using their registered Google account.
+7. The backend verifies that the authenticated email belongs to an active authorized user.
+8. The application loads the user's role and permitted school scope.
+9. Unapproved users must not gain access to school data.
+
+Where needed, create secure server-side functions for invitation management, account activation, role changes, and revocation.
+
+Do not let a user create, change, or approve their own privileged role.
+
+For the initial Super Admin, provide a documented one-time secure bootstrap procedure using Firebase Admin SDK or trusted administrative credentials.
+
+Do not hardcode admin accounts or passwords.
+
+Optional:
+Support Email/Password login only if explicitly enabled in Firebase Authentication and implemented securely.
+
+==================================================
+5. ROLE-BASED ACCESS CONTROL
+==================================================
+
+Implement the following roles:
+
+A. SUPER_ADMIN
+- Full access
+- Create, edit, deactivate users
+- Assign roles and permissions
+- Manage regions
+- Manage schools
+- Configure master data
+- Access system audit logs
+- Verify data
+
+B. FOUNDATION_MANAGER
+- View all schools and regions
+- Access the executive dashboard
+- View all Wave 1 modules
+- Review and verify submitted data
+- Export reports
+- Cannot modify Super Admin privileges
+
+C. REGIONAL_LEAD
+- View assigned regions and schools only
+- Review school submissions
+- Verify or return submissions for correction
+- Monitor regional performance
+- Export authorized regional reports
+
+D. SCHOOL_PRINCIPAL
+- Access assigned school only
+- View all Wave 1 data for that school
+- Edit school data where authorized
+- Verify entries submitted by school staff
+- Submit school data to ARF
+
+E. SCHOOL_OPERATOR
+- Access assigned school only
+- Input and update school profile
+- Input and update enrollment data
+- Import approved school datasets
+- View submission status
+
+F. HR_OFFICER
+- Access authorized schools only
+- Input and manage teacher and staff data
+- Update HR records
+
+G. ASSET_OFFICER
+- Access authorized schools only
+- Input and update assets
+- Manage facilities condition records
+- Upload asset inventory spreadsheets
+
+The same person may have one or more authorized school assignments.
+
+Implement permissions at the backend/database layer, NOT only by hiding frontend menus.
+
+Use secure custom claims for authorization where appropriate, supported by server-managed membership records for school and regional access.
+
+Firestore Security Rules must enforce user permissions.
+
+Use deny-by-default rules.
+
+Unassigned users must not read or modify school information.
+
+Ensure that administrator-only collections cannot be modified by ordinary users.
+
+==================================================
+6. APPLICATION NAVIGATION
+==================================================
+
+Build this application structure:
+
+01. Dashboard
+02. School Management
+    - Daftar Sekolah
+    - Profil Sekolah
+    - Data Rombongan Belajar
+    - Data Peserta Didik
+03. Human Resources
+    - Daftar Guru & Tenaga Kependidikan
+    - Kualifikasi & Sertifikasi
+    - Penugasan Guru
+04. Facilities & Assets
+    - Inventaris Sekolah
+    - Sarana & Prasarana
+    - Kondisi Aset
+    - Kebutuhan Perbaikan
+05. Data Management
+    - Import Data Excel
+    - Validasi Data
+    - Status Pengumpulan Data
+06. Reports & Analytics
+    - Laporan Sekolah
+    - Laporan Regional
+    - Export Data
+07. Administration
+    - Manajemen Pengguna
+    - Manajemen Regional
+    - Manajemen Sekolah
+    - Master Data
+    - Audit Log
+08. Pengaturan Akun
+09. Logout
+
+Only display menus allowed by the current user's role.
+
+==================================================
+7. WAVE 1 MODULE A:
+SCHOOL PROFILE & ENROLLMENT
+==================================================
+
+Create a complete School Management module.
+
+A. SCHOOL MASTER DATA
+
+Fields:
+
+school_id: string, system-generated
+npsn: string, optional
+school_name: string, required
+regional_id: reference, required
+education_level: enum
+school_address: string
+district: string
+regency: string
+operational_status: enum
+operational_license: string
+accreditation_grade: enum
+accreditation_expiry: date
+school_capacity: integer
+principal_staff_id: reference
+created_at: timestamp
+updated_at: timestamp
+
+Education levels:
+TPA, PAUD, TK, SD, SMP, SMK
+
+Regional management must be dynamic.
+
+Administrators must be able to add, rename, deactivate, and assign regions.
+
+Do not hardcode the number of schools or regions.
+
+B. CLASSROOM / ENROLLMENT DATA
+
+Fields:
+
+class_id: string
+school_id: reference
+academic_year: string
+semester: enum
+grade_level: string
+class_name: string
+homeroom_staff_id: reference, optional
+class_capacity: integer
+male_students: integer
+female_students: integer
+transfer_in: integer
+transfer_out: integer
+dropout_students: integer
+classroom_id: reference, optional
+data_as_of: date
+
+All counts must be nonnegative integers.
+
+Create automatic calculated metrics:
+
+total_students =
+male_students + female_students
+
+class_occupancy_rate =
+total_students / class_capacity * 100
+
+total_school_students =
+SUM(total_students from current active classes)
+
+overcapacity_class_count =
+COUNT(classes where total_students > class_capacity)
+
+Always use the selected academic year and semester.
+
+Do not double-count historical snapshots.
+
+When class_capacity is zero or missing, show N/A rather than dividing by zero.
+
+Important:
+Provide an editable table for entering class enrollment data.
+
+Allow users to add, edit, and manage classes.
+
+Provide a class occupancy indicator.
+
+When enrollment exceeds capacity, show a warning using the label:
+
+"Kelas Melebihi Kapasitas"
+
+Do not automatically assume every school uses the same class capacity.
+
+==================================================
+8. WAVE 1 MODULE B:
+HUMAN RESOURCES MANAGEMENT
+==================================================
+
+Create a teacher and staff management system.
+
+Fields:
+
+staff_id: string, system-generated
+school_id: reference
+staff_name: string
+staff_category: enum
+primary_position: string
+employment_type: enum
+employment_start_date: date
+employment_status: enum
+highest_education: enum
+education_major: string
+teacher_certification: enum
+teaching_subject: string
+assigned_class_id: reference, optional
+weekly_teaching_hours: number
+additional_assignment: string
+professional_development_need: string
+created_at: timestamp
+updated_at: timestamp
+
+Staff categories:
+- Guru
+- Kepala Sekolah
+- Tenaga Kependidikan
+- Lainnya
+
+Employment status:
+- Aktif
+- Cuti
+- Nonaktif
+- Berakhir
+
+Employment type:
+- Tetap
+- Kontrak
+- Honorer
+- Lainnya
+
+Education qualification:
+- SMA/SMK
+- D1/D2/D3
+- D4/S1
+- S2
+- S3
+- Lainnya
+
+Certification:
+- Bersertifikat
+- Belum Bersertifikat
+- Tidak Berlaku
+
+Allow staff to have multiple teaching assignments through a separate staff_assignments dataset.
+
+Features:
+
+1. Add staff
+2. Edit staff
+3. View staff details
+4. Filter by school
+5. Filter by employment status
+6. Filter by education
+7. Filter by certification
+8. Import staff from Excel
+9. Export staff data
+10. Display staff distribution
+
+HR Dashboard metrics:
+
+- Total guru aktif
+- Total tenaga kependidikan aktif
+- Rasio murid terhadap guru
+- Persentase guru bersertifikat
+- Distribusi kualifikasi pendidikan
+- Distribusi status kepegawaian
+- Distribusi guru per regional
+- Beban mengajar guru
+
+Do not collect sensitive personal information that is unnecessary for Wave 1, such as national identity numbers, bank account numbers, or salary details.
+
+==================================================
+9. WAVE 1 MODULE C:
+FACILITIES & ASSET MANAGEMENT
+==================================================
+
+Create a complete school asset inventory and facilities management module.
+
+A. ASSET INVENTORY
+
+Fields:
+
+asset_id: string
+school_id: reference
+asset_code: string
+asset_name: string
+asset_category: enum
+asset_brand_spec: string
+asset_serial_number: string, optional
+quantity: integer
+unit_measure: string
+acquisition_date: date
+acquisition_source: enum
+funding_source: enum
+funding_year: integer
+acquisition_unit_value: number
+asset_location_id: reference
+asset_condition: enum
+asset_status: enum
+last_inspection_date: date
+created_at: timestamp
+updated_at: timestamp
+
+Funding source:
+- BOS
+- BOP
+- ARF
+- Donasi
+- Lainnya
+
+Asset condition:
+- Baik
+- Rusak Ringan
+- Rusak Berat
+
+Asset status:
+- Digunakan
+- Disimpan
+- Dalam Perbaikan
+- Dihapus
+
+Asset categories:
+- Furniture
+- Perangkat IT
+- Buku & Perpustakaan
+- Alat Permainan Edukatif
+- Laboratorium
+- Peralatan Pembelajaran
+- Peralatan Kantor
+- Peralatan Olahraga
+- Lainnya
+
+For grouped assets, support quantity by condition so that one damaged unit does not automatically mark all units as damaged.
+
+Asset metrics:
+
+total_asset_units =
+SUM(quantity)
+
+total_acquisition_value =
+SUM(quantity * acquisition_unit_value)
+
+damaged_asset_units =
+SUM(quantity of damaged assets)
+
+damaged_asset_percentage =
+damaged_asset_units / total_asset_units * 100
+
+Display asset values grouped by funding source.
+
+Never interpret acquisition value as the current market value or depreciated book value.
+
+B. FACILITIES MANAGEMENT
+
+Fields:
+
+facility_id: string
+school_id: reference
+facility_type: enum
+facility_name: string
+facility_area_m2: number
+facility_capacity: integer
+facility_condition: enum
+facility_availability: enum
+facility_utilization: enum
+repair_required: boolean
+repair_priority: enum
+estimated_repair_cost: number
+inspection_date: date
+notes: string
+
+Facility types:
+- Ruang Kelas
+- Perpustakaan
+- Laboratorium
+- Toilet
+- Ruang Guru
+- Ruang Kepala Sekolah
+- Kantor
+- Lapangan
+- Ruang UKS
+- Lainnya
+
+Facility condition:
+- Baik
+- Rusak Ringan
+- Rusak Sedang
+- Rusak Berat
+
+Repair priority:
+- Kritis
+- Tinggi
+- Sedang
+- Rendah
+
+Provide overview cards:
+
+- Total aset
+- Nilai perolehan aset
+- Aset kondisi baik
+- Aset rusak
+- Fasilitas membutuhkan perbaikan
+- Estimasi biaya perbaikan
+
+Display charts by:
+- School
+- Region
+- Funding source
+- Asset category
+- Asset condition
+- Repair priority
+
+Allow Excel import and export.
+
+==================================================
+10. EXECUTIVE DASHBOARD
+==================================================
+
+Create an executive-grade dashboard using verified Firestore data.
+
+Top filters:
+
+- Regional
+- Sekolah
+- Jenjang Pendidikan
+- Tahun Ajaran
+- Semester
+
+Provide summary KPI cards:
+
+1. Total Sekolah
+2. Total Murid
+3. Total Guru
+4. Total Tenaga Kependidikan
+5. Rasio Murid terhadap Guru
+6. Kelas Melebihi Kapasitas
+7. Total Aset
+8. Aset Memerlukan Perbaikan
+
+Create charts:
+
+A. Student Distribution by Region
+Bar chart
+
+B. Student Enrollment by Education Level
+Bar or donut chart
+
+C. Teacher Distribution
+Grouped bar chart
+
+D. Teacher Qualification & Certification
+Donut or bar chart
+
+E. Asset Condition Distribution
+Donut chart
+
+F. Asset Funding Sources
+Bar chart
+
+G. Facilities Repair Priority
+Stacked bar chart
+
+H. School Capacity Utilization
+Horizontal bar chart
+
+Provide:
+
+- Regional comparison
+- School comparison
+- Data completeness indicators
+- List of schools requiring attention
+- Recently updated datasets
+
+Do not use hardcoded metrics.
+
+Calculate metrics from actual Firestore records.
+
+By default, executive KPIs should use verified submissions.
+
+Allow authorized users to explicitly switch to provisional data where appropriate.
+
+Show a clear message when data is unavailable.
+
+Do not display zero when data is actually missing.
+
+==================================================
+11. DATA INPUT EXPERIENCE
+==================================================
+
+School users must experience a simple and efficient data entry workflow.
+
+Provide three input modes:
+
+MODE 1 — MANUAL INPUT
+Use structured forms with:
+- Clear labels
+- Dropdown selections
+- Date pickers
+- Numeric inputs
+- Required-field validation
+- Helpful error messages
+- Save Draft
+- Submit for Verification
+
+MODE 2 — EXCEL IMPORT
+Allow uploading .xlsx files.
+
+Workflow:
+1. Download official ARF Excel template.
+2. Fill in data.
+3. Upload completed Excel file.
+4. Parse the spreadsheet.
+5. Preview records before import.
+6. Highlight invalid records.
+7. Detect duplicate records.
+8. Show the number of valid and invalid rows.
+9. Import approved records into Firestore.
+10. Show import results.
+
+Provide separate Excel templates for:
+- School Profile
+- Enrollment Data
+- Teacher & Staff Data
+- Asset Inventory
+- Facilities Condition
+
+Use stable record IDs or defined composite keys to prevent duplicate imports.
+
+Use batched, size-limited writes and show meaningful import errors.
+
+Do not silently overwrite existing verified records.
+
+MODE 3 — UPDATE EXISTING RECORDS
+Users must be able to edit existing records without re-entering all information.
+
+Preserve historical records and relevant change history.
+
+The school identity should be automatically determined from user permissions whenever possible.
+
+Avoid requiring school users to repeatedly enter school name or regional information.
+
+==================================================
+12. DATA VERIFICATION WORKFLOW
+==================================================
+
+Implement the following data status:
+
+DRAFT
+SUBMITTED
+REVISION_REQUIRED
+VERIFIED
+
+Workflow:
+
+1. School staff create or update data.
+2. Staff submit it to the principal.
+3. Principal reviews and approves the school submission.
+4. Authorized Regional Lead or ARF reviewer verifies it.
+5. Verified data becomes eligible for executive reporting.
+6. If rejected, the record is returned with a revision note.
+
+Track:
+- Submitted by
+- Submitted at
+- Principal approved by
+- Principal approved at
+- Verified by
+- Verified at
+- Revision comments
+- Last updated timestamp
+
+Prevent ordinary users from marking their own data as ARF verified.
+
+Protect verified data from unauthorized modifications.
+
+If verified records need corrections, use a controlled revision workflow rather than silently overwriting them.
+
+==================================================
+13. FIRESTORE DATABASE ARCHITECTURE
+==================================================
+
+Use a clear modular Firestore structure.
+
+Suggested collections:
+
+/regions/{regionId}
+
+/schools/{schoolId}
+
+/schools/{schoolId}/classes/{classId}
+
+/schools/{schoolId}/enrollmentSnapshots/{snapshotId}
+
+/schools/{schoolId}/staff/{staffId}
+
+/schools/{schoolId}/staffAssignments/{assignmentId}
+
+/schools/{schoolId}/assets/{assetId}
+
+/schools/{schoolId}/facilities/{facilityId}
+
+/users/{uid}
+
+/userInvitations/{invitationId}
+
+/submissionReviews/{reviewId}
+
+/auditLogs/{logId}
+
+/dashboardAggregates/{aggregateId}
+
+/masterData/{masterDataId}
+
+Design the schema consistently.
+
+Use:
+- Stable document IDs
+- Server timestamps
+- Version fields where necessary
+- Explicit school references
+- Regional references
+- Clear dataset source information
+- Submission and verification metadata
+
+Do not unnecessarily duplicate mutable school or regional names across all records.
+
+School and regional relationships must remain consistent.
+
+Where useful, use trusted server-side processes to maintain dashboard aggregates.
+
+Do not allow ordinary users to modify executive dashboard aggregates.
+
+Prepare the schema for future modules:
+- Literacy & Numeracy
+- Foundational Skills
+- Academic Assessment
+- Teaching Quality
+- School Improvement
+
+Do not implement those modules in Wave 1.
+
+==================================================
+14. FIREBASE SECURITY
+==================================================
+
+Security is mandatory.
+
+Create actual Firestore Security Rules.
+
+Requirements:
+
+- Deny unauthenticated access.
+- Enforce active user authorization.
+- Enforce school-level data isolation.
+- Enforce region-level access.
+- Restrict privileged collections.
+- Prevent privilege escalation.
+- Protect verified submissions.
+- Protect master data.
+- Validate permitted fields and data types where feasible.
+- Prevent users from changing their own roles or assigned schools.
+- Prevent public registration from granting data access.
+
+For administrative operations, use Firebase Admin SDK only in a trusted server environment.
+
+Create secure backend operations for:
+- Adding authorized users
+- Changing user roles
+- Changing school assignments
+- Deactivating accounts
+- Updating access claims
+- Recording sensitive administrative actions
+
+Use Firebase Authentication identity tokens and validate authorization on each privileged request.
+
+Implement safe rules for both individual document access and collection queries.
+
+Do not assume Firestore Rules act as post-query filters.
+
+Provide Firestore indexes required by the dashboard.
+
+Use Firebase Emulator tests where possible to verify access controls.
+
+Implement an audit trail for important mutations:
+- Actor UID
+- Action
+- Entity
+- Entity ID
+- Timestamp
+- Relevant changed fields
+
+Do not expose sensitive data in logs.
+
+==================================================
+15. REPORTING AND EXPORT
+==================================================
+
+Allow authorized users to export data.
+
+Required exports:
+
+- School Profile Report
+- Student Enrollment Report
+- Human Resources Report
+- Asset Inventory Report
+- Facilities Condition Report
+- Regional Summary Report
+
+Export format:
+- Excel (.xlsx)
+- CSV where appropriate
+
+Exports must respect current user permissions.
+
+Allow filters to be applied before exporting.
+
+Include reporting period, source, and verification status in exported reports.
+
+==================================================
+16. APPLICATION BEHAVIOR
+==================================================
+
+All primary actions must be functional:
+
+- Login
+- Logout
+- User authorization
+- Add user
+- Edit user
+- Deactivate user
+- Add school
+- Edit school
+- Add region
+- Add enrollment records
+- Add staff
+- Edit staff
+- Add assets
+- Update asset condition
+- Add facilities
+- Update facility condition
+- Import Excel
+- Export Excel
+- Submit data
+- Review data
+- Verify data
+- Filter dashboard
+- Open record details
+- Display analytics
+
+Use confirmation dialogs for destructive actions.
+
+Use soft deletion or archiving where appropriate.
+
+Show loading states, success messages, validation errors, and actionable error messages.
+
+Provide empty states for schools that have not submitted data.
+
+Show data freshness and last verification dates.
+
+==================================================
+17. SOURCE CODE QUALITY
+==================================================
+
+Generate maintainable source code.
+
+Requirements:
+
+- Strict TypeScript
+- Reusable components
+- Modular services
+- Centralized Firebase configuration
+- Clean separation between UI, business logic, and data access
+- Type definitions for all major data entities
+- Form validation schemas
+- Reusable data tables
+- Reusable form components
+- Reusable charts
+- Role-aware routing
+- Error boundaries
+- Accessible UI controls
+- No unnecessary dependencies
+- No hardcoded Firebase secrets
+- No insecure placeholder rules
+- No fake API functions
+
+Follow a structured folder architecture.
+
+Suggested source structure:
+
+src/
+  app/
+  components/
+    layout/
+    ui/
+    charts/
+    forms/
+    tables/
+  features/
+    auth/
+    dashboard/
+    schools/
+    enrollment/
+    hr/
+    assets/
+    facilities/
+    imports/
+    verification/
+    users/
+    administration/
+  hooks/
+  services/
+  lib/
+  types/
+  utils/
+  constants/
+
+functions/
+  src/
+    auth/
+    users/
+    audit/
+
+firestore.rules
+firestore.indexes.json
+firebase.json
+README.md
+
+Adapt the structure to the framework automatically generated by Google AI Studio without breaking compatibility.
+
+==================================================
+18. TESTING & QUALITY ASSURANCE
+==================================================
+
+Test the following scenarios:
+
+1. An authorized user can log in.
+2. An unauthorized user cannot access school data.
+3. Super Admin can add a user.
+4. Super Admin can assign a school and role.
+5. School Operator cannot access another school's records.
+6. Regional Lead cannot access another regional scope.
+7. School Principal can review assigned school data.
+8. Only authorized reviewers can mark data as verified.
+9. School data persists after page refresh.
+10. Excel import correctly maps columns.
+11. Invalid Excel rows are rejected.
+12. Duplicate imports are detected.
+13. Dashboard cards show correct calculations.
+14. Filters update dashboard data correctly.
+15. Asset quantity and value calculations are accurate.
+16. Missing data is displayed as unavailable, not zero.
+17. Unauthorized users cannot change roles through direct Firestore requests.
+18. Historical enrollment periods are not double-counted.
+19. User deactivation revokes practical access.
+20. The application works on desktop and mobile.
+
+Create appropriate automated tests and document manual tests for external Firebase integrations.
+
+==================================================
+19. IMPLEMENTATION PRIORITY
+==================================================
+
+Implement incrementally while keeping the application runnable.
+
+PHASE A:
+- Project setup
+- Firebase integration
+- Authentication
+- Secure initial Super Admin provisioning
+- User management
+- Role-based access
+- Main dashboard layout
+
+PHASE B:
+- Region management
+- School master data
+- Enrollment and classroom data
+- School detail page
+
+PHASE C:
+- Human Resources module
+- Teacher and staff records
+- HR analytics
+
+PHASE D:
+- Asset inventory
+- Facilities management
+- Asset analytics
+
+PHASE E:
+- Excel imports and exports
+- Submission and verification workflows
+- Executive dashboard metrics
+- Audit logs
+- Testing and bug fixing
+
+Implement the actual application progressively, not just a development plan.
+
+If a Firebase service requires explicit user activation, explain the exact required action and continue with the parts that can be implemented.
+
+Do not replace unconfigured services with misleading demonstrations.
+
+==================================================
+20. FINAL DELIVERABLES
+==================================================
+
+The final project must include:
+
+1. Functional web application
+2. Complete React/TypeScript source code
+3. Firebase Authentication integration
+4. Cloud Firestore integration
+5. Secure user management
+6. Role-based access control
+7. School Management module
+8. Human Resources module
+9. Facilities & Assets module
+10. Functional Executive Dashboard
+11. Excel import and export
+12. Data verification workflow
+13. Firestore Security Rules
+14. Firestore indexes
+15. Secure server-side administrative code
+16. Initial Super Admin bootstrap instructions
+17. Firebase deployment instructions
+18. README with setup and operational guidance
+19. Testing checklist and results
+
+ACCEPTANCE CRITERIA:
+
+A Foundation Super Admin must be able to:
+- Log in securely.
+- Create a region.
+- Add a school.
+- Add and authorize a principal.
+- Assign the principal to a school.
+
+A School Principal or authorized School Operator must be able to:
+- Log in.
+- Access only assigned schools.
+- Enter class enrollment data.
+- Import teacher and asset spreadsheets.
+- Edit permitted records.
+- Submit data for verification.
+
+A Foundation Manager must be able to:
+- Log in.
+- Access all authorized schools and regions.
+- View consolidated real data.
+- Filter reports by region and school.
+- Review management indicators.
+- Export reports.
+
+The application must retain data in Firebase Firestore after refresh and across user sessions.
+
+The application must not depend on hardcoded sample records to function.
+
+If any acceptance criterion is incomplete, clearly identify it instead of claiming the application is fully finished.
+
+START BUILDING THE FUNCTIONAL APPLICATION NOW.
+
+Prioritize correctness, simplicity, usability, security, scalability, and institutional visual quality.
