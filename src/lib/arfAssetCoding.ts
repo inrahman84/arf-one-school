@@ -54,6 +54,11 @@ export function isValidArfCategory(code?:string):boolean {
 export function isValidArfFunding(code?:string):boolean {
   return ARF_FUNDING_CODES.some(item=>item.code===code);
 }
+/** Normalize Indonesian vehicle plate text without assuming a single fixed plate format. */
+export function normalizeTnbk(value:string):string {
+  return value.trim().toUpperCase().replace(/\s+/g,' ');
+}
+
 export function parseAssetDocumentUrls(value:string):string[] {
   const urls=value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
   if(urls.some(u=>{try { return new URL(u).protocol!=='https:'; }catch {return true;}})) {
@@ -65,10 +70,10 @@ export function validateDraftAssetInput(data:{
   asset_name:string;school_id:string;category_code:string;funding_code:string;
   acquisition_date?:string; acquisition_year?:number|null; acquisition_year_unknown?:boolean;
   quantity:number; registration_type?:string; bundle_components?:string;
-  acquisition_unit_value:number; serial_number?:string; document_urls?:string[];
+  acquisition_unit_value:number; serial_number?:string; tnbk?:string; document_urls?:string[];
   funding_details?:string;ownership_status?:string; ownership_evidence?:string; 
   asset_id?:string;
-}, others:{asset_id:string;school_id:string;asset_serial_number?:string;serial_number?:string;invoice_ref?:string}[]):string|null{
+}, others:{asset_id:string;school_id:string;asset_serial_number?:string;serial_number?:string;tnbk?:string;invoice_ref?:string}[]):string|null{
   if(!data.school_id || !data.asset_name.trim())return 'Sekolah dan Nama Barang wajib diisi.';
   if(!isValidArfCategory(data.category_code))return 'Pilih kategori dari master kode inventaris ARF.';
   if(!isValidArfFunding(data.funding_code))return 'Pilih kode sumber dana dari master ARF.';
@@ -84,10 +89,18 @@ export function validateDraftAssetInput(data:{
   if(!Number.isInteger(data.quantity)||data.quantity<1)return 'Jumlah aset tidak valid.';
   if(data.quantity!==1)return 'Setiap aset individual atau bundel tidak terpisahkan memiliki satu record (quantity = 1).';
   if(data.registration_type==='BUNDLE' && !data.bundle_components?.trim())return 'Aset bundel wajib mencantumkan rincian komponennya.';
-  const serial=data.serial_number?.trim().toLowerCase();
-  if(serial && others.some(a=>a.asset_id!==data.asset_id && a.school_id===data.school_id &&
-      (a.serial_number||a.asset_serial_number||'').trim().toLowerCase()===serial))
-    return 'Nomor seri sudah terdaftar di sekolah ini. Periksa kemungkinan aset ganda.';
+  // Only KND vehicles use TNBK; serial numbers remain historical data but are not validated for KND.
+  if(data.category_code==='KND'){
+    const plate=normalizeTnbk(data.tnbk || '');
+    if(plate && others.some(a=>a.asset_id!==data.asset_id && a.school_id===data.school_id &&
+       normalizeTnbk(a.tnbk || '')===plate))
+      return 'TNBK / Nomor Polisi sudah terdaftar untuk aset lain di sekolah ini.';
+  }else{
+    const serial=data.serial_number?.trim().toLowerCase();
+    if(serial && others.some(a=>a.asset_id!==data.asset_id && a.school_id===data.school_id &&
+        (a.serial_number||a.asset_serial_number||'').trim().toLowerCase()===serial))
+      return 'Nomor seri sudah terdaftar di sekolah ini. Periksa kemungkinan aset ganda.';
+  }
   if(data.document_urls?.some(u=>!u.startsWith('https://')))return 'Dokumen bukti hanya boleh menggunakan HTTPS.';
   return null;
 }
