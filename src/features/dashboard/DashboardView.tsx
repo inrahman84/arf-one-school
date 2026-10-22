@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   School as SchoolIcon,
   Users,
@@ -38,6 +38,8 @@ import {
   DashboardFilters,
   Semester
 } from '../../types';
+import { useAcademicYears } from '../../hooks/useAcademicYears';
+import { sortedAcademicYears } from '../../services/academicYearsService';
 
 interface DashboardViewProps {
   schools: School[];
@@ -77,11 +79,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onRefresh,
   onSelectSchool
 }) => {
+  const { activeAcademicYear: masterActiveYear, savedAcademicYears } = useAcademicYears();
+  const availableYears = sortedAcademicYears([...savedAcademicYears,...classes.map(c=>c.academic_year)]);
+  useEffect(() => {
+    if(masterActiveYear)setFilters(prev=>({...prev,academicYear:masterActiveYear}));
+  },[masterActiveYear]);
   const [filters, setFilters] = useState<DashboardFilters>({
     regionalId: 'ALL',
     schoolId: 'ALL',
     educationLevel: 'ALL',
-    academicYear: '2026/2027',
+    academicYear: '',
     semester: 'Ganjil',
     dataFreshness: 'ALL'
   });
@@ -350,8 +357,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               onChange={(e) => setFilters(prev => ({ ...prev, academicYear: e.target.value }))}
               className="w-full text-xs py-1.5 px-2.5 rounded-lg border border-gray-300 bg-white text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#073b2d]"
             >
-              <option value="2026/2027">2026/2027 (Aktif)</option>
-              <option value="2025/2026">2025/2026</option>
+              <option value="">Semua Tahun Ajaran</option>
+              {availableYears.map(year=><option key={year} value={year}>{year}{year===masterActiveYear?' (Aktif)':''}</option>)}
             </select>
           </div>
 
