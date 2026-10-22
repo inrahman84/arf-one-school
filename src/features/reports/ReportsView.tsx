@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   FileSpreadsheet,
   Download,
@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import { School, Region, ClassroomEnrollment, Staff, Asset, Facility, SubmissionReview } from '../../types';
 import { excelService } from '../../services/excelService';
+import { useAcademicYears } from '../../hooks/useAcademicYears';
+import { sortedAcademicYears } from '../../services/academicYearsService';
 
 interface ReportsViewProps {
   schools: School[];
@@ -36,7 +38,11 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
 }) => {
   const [selectedRegionId, setSelectedRegionId] = useState('ALL');
   const [selectedSchoolId, setSelectedSchoolId] = useState('ALL');
-  const [academicYear, setAcademicYear] = useState('2026/2027');
+  const {activeAcademicYear:masterActiveYear,savedAcademicYears}=useAcademicYears();
+  const yearOptions=sortedAcademicYears([...savedAcademicYears,...classes.map(c=>c.academic_year)]);
+  const [academicYear,setAcademicYear]=useState('');
+  useEffect(()=>{if(masterActiveYear)setAcademicYear(masterActiveYear)},[masterActiveYear]);
+  const selectedYear=academicYear && yearOptions.includes(academicYear)?academicYear:(masterActiveYear||yearOptions[0]||'');
 
   const filteredSchools = schools.filter(s => {
     if (selectedRegionId !== 'ALL' && s.regional_id !== selectedRegionId) return false;
@@ -73,7 +79,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   // 2. Export Student Enrollment Report
   const exportEnrollment = () => {
     const data = classes
-      .filter(c => activeSchoolIds.has(c.school_id) && c.academic_year === academicYear)
+      .filter(c => activeSchoolIds.has(c.school_id) && c.academic_year === selectedYear)
       .map(c => {
         const sch = schools.find(s => s.school_id === c.school_id);
         const male = Number(c.male_students) || 0;
@@ -200,7 +206,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         'Rasio Siswa/Guru': regTeachers > 0 ? (regStudents / regTeachers).toFixed(1) : 'N/A',
         'Total Unit Aset Terdata': regAssets,
         'Total Nilai Perolehan Aset (Rp)': regAssetVal,
-        'Tahun Periode': academicYear
+        'Tahun Periode': selectedYear
       };
     });
     excelService.exportReport('ARF_Laporan_Ringkasan_Regional', 'Ringkasan_Regional', data);
@@ -249,12 +255,12 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-1">Tahun Ajaran</label>
             <select
-              value={academicYear}
+              value={selectedYear}
               onChange={(e) => setAcademicYear(e.target.value)}
               className="w-full text-xs p-2 rounded-lg border border-gray-300"
             >
-              <option value="2026/2027">2026/2027</option>
-              <option value="2025/2026">2025/2026</option>
+              {!yearOptions.length&&<option value="">Belum ada tahun ajaran</option>}
+              {yearOptions.map(year=><option key={year} value={year}>{year}{year===masterActiveYear?' (Aktif)':''}</option>)}
             </select>
           </div>
         </div>
