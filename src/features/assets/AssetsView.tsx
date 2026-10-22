@@ -69,6 +69,7 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
   // Form State
   const [formData, setFormData] = useState({
     asset_id: '',
+    asset_number: '',
     origin_school_id: schools[0]?.school_id || '',
     current_school_id: schools[0]?.school_id || '',
     permanent_asset_id: '',
@@ -126,6 +127,7 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
       const q = searchQuery.toLowerCase();
       return (
         a.asset_name.toLowerCase().includes(q) ||
+        (a.asset_number || '').toLowerCase().includes(q) ||
         (a.asset_code || '').toLowerCase().includes(q) ||
         (a.permanent_asset_id || '').toLowerCase().includes(q) ||
         (a.display_inventory_code || '').toLowerCase().includes(q) ||
@@ -142,6 +144,7 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
     setAssetImageFile(null);
     setFormData({
       asset_id: `AST-${crypto.randomUUID()}`, // draft record ID, NOT a permanent PAID
+      asset_number: '',
       origin_school_id: selectedSchoolId !== 'ALL' ? selectedSchoolId : (accessibleSchools[0]?.school_id || ''),
       current_school_id: selectedSchoolId !== 'ALL' ? selectedSchoolId : (accessibleSchools[0]?.school_id || ''),
       permanent_asset_id: '',
@@ -194,6 +197,7 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
     setAssetImageFile(null);
     setFormData({
       asset_id: ast.asset_id,
+      asset_number: ast.asset_number || '',
       origin_school_id: ast.origin_school_id || ast.school_id,
       current_school_id: ast.current_school_id || ast.school_id,
       permanent_asset_id: ast.permanent_asset_id || '',
@@ -314,6 +318,7 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
       const {document_urls_text: _documentText, ...draftFields} = formData;
       await withTimeout(assetsService.saveAsset({
         ...draftFields,
+        asset_number: formData.asset_number.trim(),
         origin_school_id: editingAsset?.origin_school_id || formData.school_id,
         current_school_id: editingAsset?.current_school_id || formData.school_id,
         asset_category: categoryLabel(formData.category_code) as AssetCategory,
@@ -358,6 +363,7 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
       const sch = schools.find(sc => sc.school_id === a.school_id);
       return {
         'ID Record': a.asset_id,
+        'Nomor Aset': a.asset_number || '-',
         'Permanent Asset ID': a.permanent_asset_id || 'Belum terbit',
         'Display Inventory Code': a.display_inventory_code || 'Belum terbit',
         'Status Registrasi': a.registration_status || 'Legacy',
@@ -570,6 +576,7 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
                     </td>
                     <td className="py-3 px-4">
                       <div className="font-bold text-gray-900">{ast.asset_name}</div>
+                      {ast.asset_number && <div className="text-[11px] text-[#073b2d] font-semibold">Nomor Aset: {ast.asset_number}</div>}
                       <div className="text-[11px] text-gray-400 font-mono">{ast.display_inventory_code || ast.asset_code || ast.asset_id}</div>
                     </td>
                     <td className="py-3 px-4 text-gray-700">{sch?.school_name || ast.school_id}</td>
@@ -686,25 +693,18 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
                   </select>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Permanent Asset ID (PAID)</label>
-                  <input readOnly value={formData.permanent_asset_id || 'Belum diterbitkan (DRAFT)'}
-                    className="w-full text-xs p-2 rounded-lg border border-gray-300 bg-gray-50 font-mono"/>
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Display Inventory Code (DIC)</label>
-                  <input readOnly value={formData.display_inventory_code || formData.asset_code || 'Belum diterbitkan (menunggu verifikasi & persetujuan)'}
-                    className="w-full text-xs p-2 rounded-lg border border-gray-300 bg-gray-50 font-mono"/>
-                  <p className="mt-1 text-[11px] text-gray-600">
-                    Format usulan: ARF/SCHOOL_ID/CATEGORY/FUNDING/YEAR/SEQUENCE.
-                    Kode awal dan PAID hanya boleh diterbitkan otomatis dalam transaksi atomik setelah approval ARF.
-                    {formData.asset_code&&!formData.display_inventory_code&&' Kode lama ditampilkan sebagai referensi historis, bukan DIC yang disahkan.'}
-                  </p>
-                </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Status Registrasi</label>
-                  <input readOnly value={formData.registration_status}
-                    className="w-full text-xs p-2 rounded-lg border border-gray-300 bg-gray-50 font-semibold"/>
+                  <label htmlFor="arf-asset-number" className="block text-xs font-semibold text-gray-700 mb-1">Nomor Aset</label>
+                  <input
+                    id="arf-asset-number"
+                    type="text"
+                    maxLength={80}
+                    value={formData.asset_number}
+                    onChange={(e) => setFormData({ ...formData, asset_number: e.target.value })}
+                    placeholder="Masukkan nomor aset"
+                    className="w-full text-xs p-2 rounded-lg border border-gray-300"
+                  />
+                  <p className="mt-1 text-[11px] text-gray-500">Nomor aset untuk pencatatan internal. Tidak menggantikan kode inventaris permanen.</p>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">School ID Asal / Registrasi</label>
@@ -715,7 +715,7 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
                   <label className="block text-xs font-semibold text-gray-700 mb-1">School ID Saat Ini</label>
                   <input readOnly value={formData.current_school_id || formData.school_id}
                     className="w-full text-xs p-2 rounded-lg border border-gray-300 bg-gray-50 font-mono"/>
-                  <p className="mt-1 text-[11px] text-gray-500">Mutasi antar-sekolah harus melalui alur persetujuan terpisah. Kode sekolah dari Master Sekolah harus divalidasi sebelum penerbitan DIC.</p>
+                  <p className="mt-1 text-[11px] text-gray-500">Mutasi antar-sekolah harus melalui alur persetujuan terpisah.</p>
                 </div>
 
                 <div className="sm:col-span-2">
