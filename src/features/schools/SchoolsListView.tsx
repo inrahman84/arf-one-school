@@ -12,7 +12,7 @@ import {
   Building,
   GraduationCap
 } from 'lucide-react';
-import { School, Region, EducationLevel, EDUCATION_LEVELS, OperationalStatus, AccreditationGrade } from '../../types';
+import { School, Region, Staff, EducationLevel, EDUCATION_LEVELS, OperationalStatus, OPERATIONAL_STATUS_OPTIONS, AccreditationGrade } from '../../types';
 import { schoolsService } from '../../services/schoolsService';
 import { useAuth } from '../../context/AuthContext';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
@@ -20,6 +20,7 @@ import { ConfirmModal } from '../../components/ui/ConfirmModal';
 interface SchoolsListViewProps {
   schools: School[];
   regions: Region[];
+  staff: Staff[];
   onRefresh: () => void;
   onSelectSchool: (schoolId: string) => void;
 }
@@ -27,6 +28,7 @@ interface SchoolsListViewProps {
 export const SchoolsListView: React.FC<SchoolsListViewProps> = ({
   schools,
   regions,
+  staff,
   onRefresh,
   onSelectSchool
 }) => {
@@ -66,13 +68,27 @@ export const SchoolsListView: React.FC<SchoolsListViewProps> = ({
     district: '',
     village: '',
     regency: '',
-    operational_status: 'Aktif' as OperationalStatus,
+    operational_status: 'Aktif Tidak Memiliki Izin Operasional' as OperationalStatus,
     operational_license: '',
     accreditation_grade: 'A' as AccreditationGrade,
     accreditation_expiry: '',
     school_capacity: 300,
-    principal_name: ''
+    principal_name: '',
+    principal_staff_id: ''
   });
+
+  // Only current PTK of the selected school can be assigned as Principal.
+  // Teachers are included because a teacher may be formally appointed Principal
+  // even if the category has not yet been updated by the school's operator.
+  const principalCandidates = staff
+    .filter(person => person.school_id === formData.school_id && person.employment_status === 'Aktif')
+    .filter(person => person.staff_category === 'Guru' || person.staff_category === 'Kepala Sekolah' ||
+      /kepala\s+sekolah/i.test(person.primary_position || ''))
+    .sort((a, b) => {
+      const aPrincipal = a.staff_category === 'Kepala Sekolah' || /kepala\s+sekolah/i.test(a.primary_position || '');
+      const bPrincipal = b.staff_category === 'Kepala Sekolah' || /kepala\s+sekolah/i.test(b.primary_position || '');
+      return Number(bPrincipal) - Number(aPrincipal) || a.staff_name.localeCompare(b.staff_name, 'id');
+    });
 
   const openAddModal = () => {
     setEditingSchool(null);
@@ -87,12 +103,13 @@ export const SchoolsListView: React.FC<SchoolsListViewProps> = ({
       district: '',
       village: '',
       regency: '',
-      operational_status: 'Aktif',
+      operational_status: 'Aktif Tidak Memiliki Izin Operasional',
       operational_license: '',
       accreditation_grade: 'A',
       accreditation_expiry: '',
       school_capacity: 300,
-      principal_name: ''
+      principal_name: '',
+      principal_staff_id: ''
     });
     setModalOpen(true);
   };
@@ -116,7 +133,8 @@ export const SchoolsListView: React.FC<SchoolsListViewProps> = ({
       accreditation_grade: sch.accreditation_grade || 'Belum Terakreditasi',
       accreditation_expiry: sch.accreditation_expiry || '',
       school_capacity: sch.school_capacity || 300,
-      principal_name: sch.principal_name || ''
+      principal_name: sch.principal_name || '',
+      principal_staff_id: sch.principal_staff_id || ''
     });
     setModalOpen(true);
   };
@@ -161,6 +179,18 @@ export const SchoolsListView: React.FC<SchoolsListViewProps> = ({
       return;
     }
     setFormError(null);
+    if (!(OPERATIONAL_STATUS_OPTIONS as readonly string[]).includes(formData.operational_status)) {
+      setFormError('Pilih salah satu dari tiga Status Operasional yang berlaku.');
+      return;
+    }
+    // Validate the principal belongs to this school and is an active PTK.
+    const selectedPrincipal = formData.principal_staff_id
+      ? principalCandidates.find(person => person.staff_id === formData.principal_staff_id)
+      : undefined;
+    if (formData.principal_staff_id && !selectedPrincipal) {
+      setFormError('PTK Kepala Sekolah tidak ditemukan atau sudah tidak aktif pada sekolah ini. Pilih ulang.');
+      return;
+    }
     if (!formData.school_name || !formData.regional_id) {
       setFormError('Nama Sekolah dan Wilayah/Regional wajib diisi!');
       return;
@@ -170,6 +200,9 @@ export const SchoolsListView: React.FC<SchoolsListViewProps> = ({
     try {
       await schoolsService.saveSchool({
         ...formData,
+        principal_staff_id: selectedPrincipal?.staff_id || '',
+        // Keep legacy name until administrator explicitly chooses/clears the assignment.
+        principal_name: selectedPrincipal?.staff_name || formData.principal_name,
         village: formData.village.trim(),
         school_capacity: Number(formData.school_capacity) || 0,
         created_at: editingSchool ? editingSchool.created_at : new Date().toISOString()
@@ -375,8 +408,8 @@ export const SchoolsListView: React.FC<SchoolsListViewProps> = ({
 
       {/* Add / Edit School Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-2 sm:p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full min-w-0 p-4 sm:p-6 shadow-2xl overflow-y-auto max-h-[94dvh] sm:max-h-[90vh]">
             <h3 className="text-base font-bold text-gray-900 pb-3 border-b border-gray-200">
               {editingSchool ? 'Edit Data Sekolah' : 'Tambah Unit Sekolah Baru'}
             </h3>
@@ -395,7 +428,7 @@ export const SchoolsListView: React.FC<SchoolsListViewProps> = ({
                     type="text"
                     disabled={!!editingSchool}
                     value={formData.school_id}
-                    onChange={(e) => setFormData({ ...formData, school_id: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, school_id: e.target.value, principal_staff_id: '', principal_name: '' })}
                     className="w-full text-xs p-2 rounded-lg border border-gray-300 bg-gray-50 font-mono"
                     required
                   />
@@ -502,10 +535,13 @@ export const SchoolsListView: React.FC<SchoolsListViewProps> = ({
                     onChange={(e) => setFormData({ ...formData, operational_status: e.target.value as OperationalStatus })}
                     className="w-full text-xs p-2 rounded-lg border border-gray-300"
                   >
-                    <option value="Aktif">Aktif</option>
-                    <option value="Izin Operasional Baru">Izin Operasional Baru</option>
-                    <option value="Menunggu Akreditasi">Menunggu Akreditasi</option>
-                    <option value="Nonaktif">Nonaktif</option>
+                    {!(OPERATIONAL_STATUS_OPTIONS as readonly string[]).includes(formData.operational_status) &&
+                      <option value={formData.operational_status} disabled>
+                        {formData.operational_status} (status lama — pilih yang baru)
+                      </option>}
+                    {OPERATIONAL_STATUS_OPTIONS.map(status =>
+                      <option key={status} value={status}>{status}</option>
+                    )}
                   </select>
                 </div>
 
@@ -545,30 +581,59 @@ export const SchoolsListView: React.FC<SchoolsListViewProps> = ({
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Nama Kepala Sekolah</label>
-                  <input
-                    type="text"
-                    value={formData.principal_name}
-                    onChange={(e) => setFormData({ ...formData, principal_name: e.target.value })}
-                    placeholder="Gelar &amp; Nama Lengkap Kepala Sekolah"
-                    className="w-full text-xs p-2 rounded-lg border border-gray-300"
-                  />
+                  <label htmlFor="school-principal" className="block text-xs font-semibold text-gray-700 mb-1">
+                    Nama Kepala Sekolah (Data Guru &amp; Tenaga Kependidikan)
+                  </label>
+                  <select
+                    id="school-principal"
+                    value={formData.principal_staff_id}
+                    onChange={(event) => {
+                      const selected = principalCandidates.find(person => person.staff_id === event.target.value);
+                      setFormData(prev => ({
+                        ...prev,
+                        principal_staff_id: selected?.staff_id || '',
+                        principal_name: selected?.staff_name || ''
+                      }));
+                    }}
+                    className="w-full min-w-0 rounded-lg border border-gray-300 bg-white p-2.5 text-xs"
+                  >
+                    <option value="">— Belum ditetapkan —</option>
+                    {formData.principal_staff_id &&
+                      !principalCandidates.some(person => person.staff_id === formData.principal_staff_id) &&
+                      <option value={formData.principal_staff_id} disabled>PTK sebelumnya tidak aktif/tidak ditemukan</option>}
+                    {principalCandidates.map(person => (
+                      <option key={person.staff_id} value={person.staff_id}>
+                        {person.staff_name} — {person.primary_position || person.staff_category}
+                      </option>
+                    ))}
+                  </select>
+                  {principalCandidates.length === 0 &&
+                    <p className="mt-1.5 text-xs text-amber-800">
+                      Belum ada Guru/Kepala Sekolah aktif pada sekolah ini. Simpan sekolah terlebih dahulu, lalu
+                      tambahkan PTK pada Sumber Daya → Guru &amp; Tenaga Kependidikan.
+                    </p>}
+                  {!formData.principal_staff_id && formData.principal_name &&
+                    <p className="mt-1.5 text-xs text-amber-800">
+                      Nama tersimpan sebelumnya: {formData.principal_name} (belum terhubung ke data PTK). Pilih PTK untuk menyinkronkan.
+                    </p>}
+                  {formData.principal_staff_id && principalCandidates.some(person => person.staff_id === formData.principal_staff_id) &&
+                    <p className="mt-1 text-[11px] text-gray-500">ID PTK: {formData.principal_staff_id}. Nama tersimpan otomatis dari master PTK.</p>}
                 </div>
               </div>
 
               {/* Modal Actions */}
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+              <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2 sm:gap-3 pt-4 border-t border-gray-200">
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="px-4 py-2 rounded-lg border border-gray-300 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-lg border border-gray-300 text-xs font-medium text-gray-700 hover:bg-gray-50"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-4 py-2 rounded-lg text-white font-semibold text-xs transition-colors shadow-sm"
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-lg text-white font-semibold text-xs transition-colors shadow-sm"
                   style={{ backgroundColor: '#073b2d' }}
                 >
                   {submitting ? 'Menyimpan...' : 'Simpan Data Sekolah'}
