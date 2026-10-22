@@ -3,6 +3,8 @@ import { supabase } from '../lib/supabase';
 import { collection, doc, getDocs, setDoc, updateDoc, query, where } from '../lib/documentStore';
 import { db } from '../lib/backend';
 import type { UserProfile, UserInvitation, UserRole, UserStatus } from '../types';
+// Google OAuth requires an enabled Supabase provider and an approved Google Cloud OAuth client.
+export const GOOGLE_OAUTH_ENABLED = import.meta.env.VITE_GOOGLE_OAUTH_ENABLED === 'true';
 export const BOOTSTRAP_ADMIN_EMAIL = 'iswahyudhi.r@sumbermassarana.sch.id';
 type Member = {user_id:string;email:string;display_name:string;position:string|null;role:UserRole;assigned_regions:string[];assigned_schools:string[];status:UserStatus;created_at:string;updated_at:string};
 function toProfile(m:Member):UserProfile {return {uid:m.user_id,email:m.email,displayName:m.display_name,
@@ -10,8 +12,33 @@ function toProfile(m:Member):UserProfile {return {uid:m.user_id,email:m.email,di
   status:m.status,createdAt:m.created_at,updatedAt:m.updated_at};}
 export const authService = {
   async signInWithGoogle():Promise<void> {
-    const {error} = await supabase.auth.signInWithOAuth({provider:'google', options:{redirectTo:window.location.origin}});
-    if(error) throw error;
+    if(!GOOGLE_OAUTH_ENABLED) {
+      throw new Error('Login Google belum aktif. Gunakan email dan kata sandi, atau hubungi administrator.');
+    }
+    const {error} = await supabase.auth.signInWithOAuth({
+      provider:'google', options:{redirectTo:window.location.origin}
+    });
+    if(error) {
+      if(error.message?.includes('provider is not enabled') || error.code === 'validation_failed') {
+        throw new Error('Google OAuth belum diaktifkan di Supabase. Silakan login dengan email dan kata sandi.');
+      }
+      throw error;
+    }
+  },
+  async registerWithEmail(emailInput:string,password:string,displayName:string):Promise<{confirmationRequired:boolean}> {
+    const email=emailInput.trim().toLowerCase();
+    const name=displayName.trim();
+    if(!email || !name) throw new Error('Nama lengkap dan email wajib diisi.');
+    if(password.length<10) throw new Error('Kata sandi harus terdiri dari minimal 10 karakter.');
+    const {data,error}=await supabase.auth.signUp({
+      email,password,
+      options:{
+        data:{full_name:name},
+        emailRedirectTo:window.location.origin
+      }
+    });
+    if(error)throw error;
+    return {confirmationRequired:!data.session};
   },
   async signInWithAuthorizedEmail(emailInput:string):Promise<void> {
     const email=emailInput.toLowerCase().trim();
