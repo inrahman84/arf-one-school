@@ -135,7 +135,10 @@ export interface Staff {
   updated_at: string;
 }
 
-export type FundingSource = 'BOS' | 'BOP' | 'ARF' | 'Donasi' | 'Lainnya';
+/** Old labels retained for historical data; new entries use the ARF funding codes. */
+export type FundingSource =
+  | 'BK' | 'BR' | 'DAK' | 'BDA' | 'ARF' | 'OTH' | 'LGC'
+  | 'BOS' | 'BOP' | 'Donasi' | 'Lainnya';
 export type AssetCondition = 'Baik' | 'Rusak Ringan' | 'Rusak Berat';
 export type AssetStatus = 'Digunakan' | 'Disimpan' | 'Dalam Perbaikan' | 'Dihapus';
 export type AssetCategory =
@@ -147,12 +150,42 @@ export type AssetCategory =
   | 'Peralatan Pembelajaran'
   | 'Peralatan Kantor'
   | 'Peralatan Olahraga'
-  | 'Lainnya';
+  | 'Lainnya'
+  | 'Elektronik & TIK' | 'Meubelair' | 'Media pembelajaran' | 'Peralatan laboratorium'
+  | 'Peralatan olahraga' | 'Seni dan musik' | 'Koleksi dan aset perpustakaan'
+  | 'Kesehatan dan UKS' | 'Peralatan operasional' | 'Peralatan fasilitas'
+  | 'Bangunan dan konstruksi (register khusus)' | 'Kendaraan';
 
 export interface Asset {
   asset_id: string;
   school_id: string;
+  /** Historical asset code remains for backwards compatibility (not a new DIC). */
   asset_code?: string;
+  permanent_asset_id?: string; // Issued after APPROVED by atomic server workflow
+  display_inventory_code?: string; // Issued after APPROVED; never manually entered
+  origin_school_id?: string; // Immutable when first registered
+  current_school_id?: string;
+  category_code?: string;
+  funding_code?: string;
+  funding_details?: string; // Program / donor / basis funding verification
+  acquisition_year?: number | null;
+  acquisition_year_unknown?: boolean;
+  registration_type?: 'INDIVIDUAL' | 'BUNDLE';
+  registration_status?: 'DRAFT' | 'VERIFIED' | 'APPROVED';
+  bundle_components?: string;
+  asset_brand?: string;
+  asset_model?: string;
+  serial_number?: string;
+  ownership_status?: string;
+  ownership_evidence?: string;
+  external_asset_code?: string;
+  room_id?: string;
+  custodian_id?: string;
+  lifecycle_status?: string;
+  invoice_ref?: string;
+  handover_ref?: string;
+  document_urls?: string[];
+  archived_at?: string;
   asset_name: string;
   asset_category: AssetCategory;
   asset_brand_spec?: string;
