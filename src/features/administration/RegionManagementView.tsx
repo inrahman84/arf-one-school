@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   MapPin,
   Plus,
@@ -6,10 +6,13 @@ import {
   Trash2,
   CheckCircle,
   Building,
-  School as SchoolIcon
+  School as SchoolIcon,
+  GripVertical,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 import { Region, School } from '../../types';
-import { regionsService } from '../../services/regionsService';
+import { regionsService, sortRegions } from '../../services/regionsService';
 import { useAuth } from '../../context/AuthContext';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 
@@ -26,6 +29,41 @@ export const RegionManagementView: React.FC<RegionManagementViewProps> = ({
 }) => {
   const { isSuperAdmin } = useAuth();
   const [modalOpen, setModalOpen] = useState(false);
+  const [localOrder, setLocalOrder] = useState<string[] | null>(null);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [reordering, setReordering] = useState(false);
+  const [reorderError, setReorderError] = useState<string | null>(null);
+  useEffect(() => { setLocalOrder(null); }, [regions]);
+  const sortedCards = sortRegions(regions);
+  const orderedCards = localOrder
+    ? [...sortedCards].sort((a,b) => {
+        const ai=localOrder.indexOf(a.id), bi=localOrder.indexOf(b.id);
+        return (ai<0?Number.MAX_SAFE_INTEGER:ai)-(bi<0?Number.MAX_SAFE_INTEGER:bi);
+      })
+    : sortedCards;
+
+  const moveCard = async (fromId:string,toId:string) => {
+    if (!isSuperAdmin || reordering || fromId===toId) return;
+    const ids=orderedCards.map(r=>r.id);
+    const from=ids.indexOf(fromId), to=ids.indexOf(toId);
+    if(from<0||to<0)return;
+    ids.splice(from,1);
+    ids.splice(to,0,fromId);
+    setReorderError(null);
+    setLocalOrder(ids);
+    setReordering(true);
+    try {
+      await regionsService.saveRegionOrder(ids);
+      await onRefresh();
+    } catch (err) {
+      setLocalOrder(null);
+      setReorderError(err instanceof Error ? err.message : 'Gagal menyimpan urutan wilayah.');
+      await onRefresh();
+    } finally {
+      setReordering(false);
+      setDraggingId(null);
+    }
+  };
   const [editingRegion, setEditingRegion] = useState<Region | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [deleteModal, setDeleteModal] = useState<{
@@ -86,7 +124,7 @@ export const RegionManagementView: React.FC<RegionManagementViewProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.code) {
-      alert('Nama Wilayah dan Kode wajib diisi!');
+      alert('Regional dan Kode Wilayah wajib diisi!');
       return;
     }
 
@@ -94,6 +132,7 @@ export const RegionManagementView: React.FC<RegionManagementViewProps> = ({
     try {
       await regionsService.saveRegion({
         ...formData,
+        sortOrder: editingRegion?.sortOrder ?? (Math.max(-1,...regions.map(r => Number.isFinite(r.sortOrder) ? Number(r.sortOrder) : -1)) + 1),
         createdAt: editingRegion ? editingRegion.createdAt : new Date().toISOString()
       });
       setModalOpen(false);
@@ -133,15 +172,26 @@ export const RegionManagementView: React.FC<RegionManagementViewProps> = ({
         )}
       </div>
 
+      {isSuperAdmin && <p className="text-xs text-[#5f5d5d] flex items-center gap-2">
+        <GripVertical className="h-4 w-4" /> Seret kartu wilayah untuk mengubah urutannya. Tombol panah juga tersedia untuk pengguna perangkat sentuh atau keyboard.
+        {reordering && <span className="font-bold text-[#073b2d]">Menyimpan urutan...</span>}
+      </p>}
+      {reorderError && <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">{reorderError}</p>}
       {/* Regions Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {regions.map(reg => {
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" role="list" aria-label="Urutan Regional">
+        {orderedCards.map((reg,position) => {
           const regSchools = schools.filter(s => s.regional_id === reg.id);
 
           return (
-            <div key={reg.id} className="bg-white rounded-2xl border border-gray-200 p-5 shadow-xs flex flex-col justify-between">
+            <div key={reg.id} role="listitem" draggable={isSuperAdmin&&!reordering}
+              onDragStart={event=>{setDraggingId(reg.id);event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',reg.id);}}
+              onDragOver={event=>{if(isSuperAdmin&&!reordering){event.preventDefault();event.dataTransfer.dropEffect='move';}}}
+              onDrop={event=>{event.preventDefault();const source=event.dataTransfer.getData('text/plain')||draggingId;if(source)void moveCard(source,reg.id);}}
+              onDragEnd={()=>setDraggingId(null)}
+              className={`bg-white rounded-2xl border border-gray-200 p-5 shadow-xs flex flex-col justify-between ${isSuperAdmin?'cursor-grab active:cursor-grabbing':''} ${draggingId===reg.id?'opacity-40':''}`}>
               <div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
+                  {isSuperAdmin && <GripVertical className="h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />}
                   <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-emerald-50 text-[#073b2d] border border-emerald-100">
                     {reg.code}
                   </span>
@@ -165,6 +215,18 @@ export const RegionManagementView: React.FC<RegionManagementViewProps> = ({
 
               {isSuperAdmin && (
                 <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-end gap-2">
+                  <button type="button" disabled={reordering||position===0}
+                    onClick={()=>{if(position>0)void moveCard(reg.id,orderedCards[position-1].id)}}
+                    title="Pindahkan wilayah ke atas" aria-label={`Naikkan ${reg.name}`}
+                    className="p-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-30">
+                    <ArrowUp className="h-3.5 w-3.5" />
+                  </button>
+                  <button type="button" disabled={reordering||position===orderedCards.length-1}
+                    onClick={()=>{if(position<orderedCards.length-1)void moveCard(reg.id,orderedCards[position+1].id)}}
+                    title="Pindahkan wilayah ke bawah" aria-label={`Turunkan ${reg.name}`}
+                    className="p-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-30">
+                    <ArrowDown className="h-3.5 w-3.5" />
+                  </button>
                   <button
                     onClick={() => openEditModal(reg)}
                     className="p-1.5 rounded-lg border border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-50 text-xs flex items-center gap-1 font-semibold"
@@ -224,7 +286,7 @@ export const RegionManagementView: React.FC<RegionManagementViewProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Nama Wilayah / Regional *</label>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Regional *</label>
                 <input
                   type="text"
                   value={formData.name}
@@ -236,7 +298,7 @@ export const RegionManagementView: React.FC<RegionManagementViewProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Keterangan / Cakupan</label>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Cakupan</label>
                 <textarea
                   rows={2}
                   value={formData.description}
