@@ -78,6 +78,7 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
     funding_details: '',
     acquisition_year: 0,
     acquisition_year_unknown: false,
+    catalog_year: new Date().getFullYear(),
     registration_type: 'INDIVIDUAL' as 'INDIVIDUAL'|'BUNDLE',
     registration_status: 'DRAFT' as 'DRAFT'|'VERIFIED'|'APPROVED',
     bundle_components: '',
@@ -150,6 +151,7 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
       funding_details: '',
       acquisition_year: 0,
       acquisition_year_unknown: false,
+    catalog_year: new Date().getFullYear(),
       registration_type: 'INDIVIDUAL',
       registration_status: 'DRAFT',
       bundle_components: '',
@@ -201,6 +203,7 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
       funding_details: ast.funding_details || '',
       acquisition_year: ast.acquisition_year || (ast.acquisition_date?Number(ast.acquisition_date.slice(0,4)):0),
       acquisition_year_unknown: Boolean(ast.acquisition_year_unknown),
+      catalog_year: ast.catalog_year || (ast.created_at ? Number(ast.created_at.slice(0,4)) : new Date().getFullYear()),
       registration_type: ast.registration_type || (ast.quantity>1?'BUNDLE':'INDIVIDUAL'),
       registration_status: ast.registration_status || 'DRAFT',
       bundle_components: ast.bundle_components || '',
@@ -836,6 +839,10 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Tahun Perolehan</label>
                   <input readOnly value={formData.acquisition_year_unknown?'Tidak Diketahui':(formData.acquisition_year||'—')}
                     className="w-full text-xs p-2 rounded-lg border border-gray-300 bg-gray-50"/>
+                  {formData.acquisition_year_unknown &&
+                    <p className="mt-1 text-[11px] text-amber-800">
+                      Tahun katalog/sensus: {formData.catalog_year}. Bukan tahun perolehan faktual.
+                    </p>}
                   <label className="mt-1.5 flex items-start gap-2 text-xs text-gray-700">
                     <input type="checkbox" checked={formData.acquisition_year_unknown}
                       onChange={e=>setFormData({...formData,acquisition_year_unknown:e.target.checked,
