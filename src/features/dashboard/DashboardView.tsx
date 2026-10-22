@@ -36,7 +36,8 @@ import {
   Facility,
   SubmissionReview,
   DashboardFilters,
-  Semester
+  Semester,
+  EDUCATION_LEVELS
 } from '../../types';
 import { useAcademicYears } from '../../hooks/useAcademicYears';
 import { sortedAcademicYears } from '../../services/academicYearsService';
