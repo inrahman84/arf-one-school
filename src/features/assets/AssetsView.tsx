@@ -646,7 +646,10 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Sekolah *</label>
                   <select
                     value={formData.school_id}
-                    onChange={(e) => setFormData({ ...formData, school_id: e.target.value })}
+                    onChange={(e) => setFormData({
+                      ...formData, school_id: e.target.value,
+                      origin_school_id: e.target.value, current_school_id: e.target.value
+                    })}
                     disabled={Boolean(editingAsset)}
                     title={editingAsset ? "Sekolah asal aset tidak dapat diganti saat edit." : undefined}
                     className="w-full text-xs p-2 rounded-lg border border-gray-300"
@@ -658,15 +661,36 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
                   </select>
                 </div>
 
+                <div className="space-y-1">
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Permanent Asset ID (PAID)</label>
+                  <input readOnly value={formData.permanent_asset_id || 'Belum diterbitkan (DRAFT)'}
+                    className="w-full text-xs p-2 rounded-lg border border-gray-300 bg-gray-50 font-mono"/>
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Display Inventory Code (DIC)</label>
+                  <input readOnly value={formData.display_inventory_code || formData.asset_code || 'Belum diterbitkan (menunggu verifikasi & persetujuan)'}
+                    className="w-full text-xs p-2 rounded-lg border border-gray-300 bg-gray-50 font-mono"/>
+                  <p className="mt-1 text-[11px] text-gray-600">
+                    Format usulan: ARF/SCHOOL_ID/CATEGORY/FUNDING/YEAR/SEQUENCE.
+                    Kode awal dan PAID hanya boleh diterbitkan otomatis dalam transaksi atomik setelah approval ARF.
+                    {formData.asset_code&&!formData.display_inventory_code&&' Kode lama ditampilkan sebagai referensi historis, bukan DIC yang disahkan.'}
+                  </p>
+                </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Kode Barang</label>
-                  <input
-                    type="text"
-                    value={formData.asset_code}
-                    onChange={(e) => setFormData({ ...formData, asset_code: e.target.value })}
-                    placeholder="Contoh: INV/IT/001"
-                    className="w-full text-xs p-2 rounded-lg border border-gray-300"
-                  />
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Status Registrasi</label>
+                  <input readOnly value={formData.registration_status}
+                    className="w-full text-xs p-2 rounded-lg border border-gray-300 bg-gray-50 font-semibold"/>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">School ID Asal / Registrasi</label>
+                  <input readOnly value={formData.origin_school_id || formData.school_id}
+                    className="w-full text-xs p-2 rounded-lg border border-gray-300 bg-gray-50 font-mono"/>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">School ID Saat Ini</label>
+                  <input readOnly value={formData.current_school_id || formData.school_id}
+                    className="w-full text-xs p-2 rounded-lg border border-gray-300 bg-gray-50 font-mono"/>
+                  <p className="mt-1 text-[11px] text-gray-500">Mutasi antar-sekolah harus melalui alur persetujuan terpisah.</p>
                 </div>
 
                 <div className="sm:col-span-2">
@@ -684,20 +708,16 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Kategori Aset *</label>
                   <select
-                    value={formData.asset_category}
-                    onChange={(e) => setFormData({ ...formData, asset_category: e.target.value as AssetCategory })}
+                    value={formData.category_code}
+                    onChange={(e) => {
+                      const code=e.target.value;
+                      setFormData({ ...formData, category_code:code, asset_category: categoryLabel(code) as AssetCategory });
+                    }}
                     className="w-full text-xs p-2 rounded-lg border border-gray-300"
                     required
                   >
-                    <option value="Furniture">Furniture</option>
-                    <option value="Perangkat IT">Perangkat IT</option>
-                    <option value="Buku & Perpustakaan">Buku & Perpustakaan</option>
-                    <option value="Alat Permainan Edukatif">Alat Permainan Edukatif</option>
-                    <option value="Laboratorium">Laboratorium</option>
-                    <option value="Peralatan Pembelajaran">Peralatan Pembelajaran</option>
-                    <option value="Peralatan Kantor">Peralatan Kantor</option>
-                    <option value="Peralatan Olahraga">Peralatan Olahraga</option>
-                    <option value="Lainnya">Lainnya</option>
+                    {formData.category_code==='' && <option value="">— Pilih kategori ARF —</option>}
+                    {ARF_ASSET_CATEGORIES.map(item=><option key={item.code} value={item.code}>{item.code} — {item.label}</option>)}
                   </select>
                 </div>
 
@@ -713,16 +733,27 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Jumlah Unit *</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={formData.quantity}
-                    onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })}
-                    className="w-full text-xs p-2 rounded-lg border border-gray-300"
-                    required
-                  />
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Jenis Registrasi</label>
+                  <select value={formData.registration_type} onChange={e=>setFormData({...formData,
+                    registration_type:e.target.value as 'INDIVIDUAL'|'BUNDLE',quantity:1})}
+                    className="w-full text-xs p-2 rounded-lg border border-gray-300">
+                    <option value="INDIVIDUAL">Aset individual (1 unit)</option>
+                    <option value="BUNDLE">Bundel tidak terpisahkan (1 aset induk)</option>
+                  </select>
+                  <p className="text-[11px] text-gray-500 mt-1">10 laptop berarti 10 aset terpisah, bukan 1 aset berjumlah 10.</p>
                 </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Jumlah Unit *</label>
+                  <input type="number" min="1" max="1" readOnly value={formData.quantity}
+                    className="w-full text-xs p-2 rounded-lg border border-gray-300 bg-gray-50" required/>
+                </div>
+                {formData.registration_type==='BUNDLE' && <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Rincian Komponen Bundel *</label>
+                  <textarea rows={2} value={formData.bundle_components}
+                    onChange={e=>setFormData({...formData,bundle_components:e.target.value})}
+                    className="w-full text-xs p-2 rounded-lg border border-gray-300"
+                    placeholder="Contoh: Mesin utama + adaptor + unit kontrol; tidak dapat dipisahkan secara fungsional"/>
+                </div>}
 
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Satuan Ukuran *</label>
@@ -739,27 +770,35 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Sumber Pendanaan *</label>
                   <select
-                    value={formData.funding_source}
-                    onChange={(e) => setFormData({ ...formData, funding_source: e.target.value as FundingSource })}
+                    value={formData.funding_code}
+                    onChange={(e) => setFormData({ ...formData, funding_code: e.target.value, funding_source: e.target.value as FundingSource })}
                     className="w-full text-xs p-2 rounded-lg border border-gray-300"
                     required
                   >
-                    <option value="ARF">ARF (Abdul Rasyid Foundation)</option>
-                    <option value="BOS">BOS (Bantuan Operasional Sekolah)</option>
-                    <option value="BOP">BOP</option>
-                    <option value="Donasi">Donasi / CSR</option>
-                    <option value="Lainnya">Lainnya</option>
+                    <option value="">— Pilih sumber dana berdasarkan bukti —</option>
+                    {ARF_FUNDING_CODES.map(item=><option key={item.code} value={item.code}>{item.code} — {item.label}</option>)}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Tahun Pengadaan</label>
-                  <input
-                    type="number"
-                    value={formData.funding_year}
-                    onChange={(e) => setFormData({ ...formData, funding_year: Number(e.target.value) })}
-                    className="w-full text-xs p-2 rounded-lg border border-gray-300"
-                  />
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Tanggal Perolehan Faktual</label>
+                  <input type="date" value={formData.acquisition_date}
+                    disabled={formData.acquisition_year_unknown}
+                    onChange={(e) => setFormData({ ...formData,
+                      acquisition_date:e.target.value,
+                      acquisition_year:e.target.value?Number(e.target.value.slice(0,4)):0 })}
+                    className="w-full text-xs p-2 rounded-lg border border-gray-300 disabled:bg-gray-100"/>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Tahun Perolehan</label>
+                  <input readOnly value={formData.acquisition_year_unknown?'Tidak Diketahui':(formData.acquisition_year||'—')}
+                    className="w-full text-xs p-2 rounded-lg border border-gray-300 bg-gray-50"/>
+                  <label className="mt-1.5 flex items-start gap-2 text-xs text-gray-700">
+                    <input type="checkbox" checked={formData.acquisition_year_unknown}
+                      onChange={e=>setFormData({...formData,acquisition_year_unknown:e.target.checked,
+                        acquisition_date:e.target.checked?'':formData.acquisition_date, acquisition_year:e.target.checked?0:formData.acquisition_year})}/>
+                    Aset lama: tahun perolehan tidak diketahui
+                  </label>
                 </div>
 
                 <div>
@@ -800,6 +839,11 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
                     <option value="Dihapus">Dihapus / Afkir</option>
                   </select>
                 </div>
+              </div>
+
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                Panduan ARF-STD-AST-001 masih berstatus DRAF. Form ini menyimpan DRAFT dan tidak menerbitkan nomor inventaris resmi.
+                Foto tersimpan di Supabase Storage; referensi bukti perolehan dicatat di bawah ini.
               </div>
 
               <PhotoUploadField
