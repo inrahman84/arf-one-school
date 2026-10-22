@@ -71,7 +71,7 @@ export interface School {
   education_level: EducationLevel;
   school_address?: string;
   district?: string;
-  village?: string; // Desa/Kelurahan (tidak wajib untuk data lama)
+  village?: string; // Desa/Estate; tetap menggunakan nama field lama agar data historis kompatibel
   regency?: string;
   operational_status: OperationalStatus;
   operational_license?: string;
