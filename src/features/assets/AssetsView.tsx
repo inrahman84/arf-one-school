@@ -43,6 +43,7 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
   const [conditionFilter, setConditionFilter] = useState('ALL');
   const [fundingFilter, setFundingFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showArchived, setShowArchived] = useState(false);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
@@ -114,6 +115,7 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
   const accessibleSchools = schools.filter(s => hasSchoolAccess(s.school_id));
 
   const filteredAssets = assets.filter(a => {
+    if(!showArchived && a.archived_at) return false;
     if (!hasSchoolAccess(a.school_id)) return false;
     if (selectedSchoolId !== 'ALL' && a.school_id !== selectedSchoolId) return false;
     if (categoryFilter !== 'ALL' && a.asset_category !== categoryFilter) return false;
@@ -124,6 +126,9 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
       return (
         a.asset_name.toLowerCase().includes(q) ||
         (a.asset_code || '').toLowerCase().includes(q) ||
+        (a.permanent_asset_id || '').toLowerCase().includes(q) ||
+        (a.display_inventory_code || '').toLowerCase().includes(q) ||
+        (a.serial_number || '').toLowerCase().includes(q) ||
         (a.asset_brand_spec || '').toLowerCase().includes(q)
       );
     }
@@ -350,7 +355,19 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
     const dataToExport = filteredAssets.map(a => {
       const sch = schools.find(sc => sc.school_id === a.school_id);
       return {
-        'ID Aset': a.asset_id,
+        'ID Record': a.asset_id,
+        'Permanent Asset ID': a.permanent_asset_id || 'Belum terbit',
+        'Display Inventory Code': a.display_inventory_code || 'Belum terbit',
+        'Status Registrasi': a.registration_status || 'Legacy',
+        'School ID Asal': a.origin_school_id || a.school_id,
+        'School ID Saat Ini': a.current_school_id || a.school_id,
+        'Kategori Kode': a.category_code || '-',
+        'Kode Sumber Dana': a.funding_code || '-',
+        'Nomor Seri': a.serial_number || a.asset_serial_number || '-',
+        'Nomor Bukti Perolehan': a.invoice_ref || '-',
+        'Nomor Berita Acara': a.handover_ref || '-',
+        'Status Kepemilikan Legal': a.ownership_status || '-',
+        'Arsip': a.archived_at || '-',
         'Sekolah': sch?.school_name || a.school_id,
         'Kode Barang': a.asset_code || '-',
         'Nama Aset': a.asset_name,
@@ -401,15 +418,10 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
                 className="text-xs py-2 px-3 rounded-lg border border-gray-300 bg-white text-gray-800"
               >
                 <option value="ALL">Semua Kategori</option>
-                <option value="Furniture">Furniture</option>
-                <option value="Perangkat IT">Perangkat IT</option>
-                <option value="Buku & Perpustakaan">Buku & Perpustakaan</option>
-                <option value="Alat Permainan Edukatif">Alat Permainan Edukatif</option>
-                <option value="Laboratorium">Laboratorium</option>
-                <option value="Peralatan Pembelajaran">Peralatan Pembelajaran</option>
-                <option value="Peralatan Kantor">Peralatan Kantor</option>
-                <option value="Peralatan Olahraga">Peralatan Olahraga</option>
-                <option value="Lainnya">Lainnya</option>
+                {ARF_ASSET_CATEGORIES.map(item=><option key={item.code} value={item.label}>{item.code} — {item.label}</option>)}
+                {['Furniture','Perangkat IT','Buku & Perpustakaan','Alat Permainan Edukatif',
+                  'Laboratorium','Peralatan Pembelajaran','Peralatan Kantor','Peralatan Olahraga','Lainnya'].map(label=>
+                  <option key={label} value={label}>{label} (legacy)</option>)}
               </select>
             </div>
 
@@ -437,11 +449,8 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
                 className="text-xs py-2 px-3 rounded-lg border border-gray-300 bg-white text-gray-800"
               >
                 <option value="ALL">Semua Sumber</option>
-                <option value="ARF">ARF (Yayasan)</option>
-                <option value="BOS">BOS</option>
-                <option value="BOP">BOP</option>
-                <option value="Donasi">Donasi</option>
-                <option value="Lainnya">Lainnya</option>
+                {ARF_FUNDING_CODES.map(item=><option key={item.code} value={item.code}>{item.code} — {item.label}</option>)}
+                {['BOS','BOP','Donasi','Lainnya'].map(label=><option key={label} value={label}>{label} (legacy)</option>)}
               </select>
             </div>
 
@@ -458,7 +467,11 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-2 self-end">
+          <div className="flex items-center gap-2 self-end flex-wrap">
+            <label className="flex items-center gap-1.5 text-xs text-gray-600">
+              <input type="checkbox" checked={showArchived} onChange={e=>setShowArchived(e.target.checked)}/>
+              Tampilkan arsip draft
+            </label>
             <button
               onClick={handleExport}
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-300 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
@@ -555,7 +568,7 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
                     </td>
                     <td className="py-3 px-4">
                       <div className="font-bold text-gray-900">{ast.asset_name}</div>
-                      <div className="text-[11px] text-gray-400 font-mono">{ast.asset_code || ast.asset_id}</div>
+                      <div className="text-[11px] text-gray-400 font-mono">{ast.display_inventory_code || ast.asset_code || ast.asset_id}</div>
                     </td>
                     <td className="py-3 px-4 text-gray-700">{sch?.school_name || ast.school_id}</td>
                     <td className="py-3 px-4">
@@ -596,14 +609,24 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
-                        <button
+                        {ast.archived_at ? (
+                          <button type="button" className="p-1 text-emerald-700 hover:bg-emerald-50 rounded-md"
+                            title="Pulihkan draft dari arsip"
+                            onClick={async()=>{
+                              try {await assetsService.restoreArchivedDraft(ast.school_id,ast.asset_id);onRefresh();}
+                              catch(error){alert(error instanceof Error?error.message:'Gagal memulihkan draft.');}
+                            }}>
+                            <Archive className="w-3.5 h-3.5"/>
+                          </button>
+                        ) : <button
                           type="button"
                           onClick={() => promptDelete(ast)}
-                          className="p-1 rounded-md hover:bg-rose-50 text-gray-400 hover:text-rose-600 transition-colors cursor-pointer"
-                          title="Hapus Aset"
+                          disabled={ast.registration_status === 'APPROVED'}
+                          className="p-1 rounded-md hover:bg-amber-50 text-gray-400 hover:text-amber-700 disabled:opacity-30"
+                          title={ast.registration_status==='APPROVED'?'Aset disahkan membutuhkan prosedur penghapusan berjenjang':'Arsipkan Draft (tidak menghapus riwayat)'}
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                          <Archive className="w-3.5 h-3.5" />
+                        </button>}
                       </div>
                     </td>
                   </tr>
@@ -626,7 +649,7 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
             <h3 className="text-base font-bold text-gray-900 pb-3 border-b border-gray-200">
-              {editingAsset ? 'Edit Data Inventaris Aset' : 'Tambah Unit Aset Baru'}
+              {editingAsset ? 'Edit Data Inventaris Aset' : 'Tambah Unit Aset Baru'} — Register ARF
             </h3>
 
             {formError && (
@@ -905,7 +928,12 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
                     <label className="block text-xs font-semibold text-gray-700 mb-1">Status Siklus Hidup</label>
                     <select value={formData.lifecycle_status} onChange={e=>setFormData({...formData,lifecycle_status:e.target.value})}
                       className="w-full rounded-lg border border-gray-300 p-2 text-xs">
-                      {ARF_LIFECYCLE_STATUSES.map(item=><option key={item.code} value={item.code}>{item.code} — {item.label}</option>)}
+                      {ARF_LIFECYCLE_STATUSES.filter(item=>
+                        ['ACTIVE','STORED','MAINTENANCE'].includes(item.code) || item.code===formData.lifecycle_status
+                      ).map(item=><option key={item.code} value={item.code}
+                        disabled={!['ACTIVE','STORED','MAINTENANCE'].includes(item.code)}>
+                        {item.code} — {item.label}
+                      </option>)}
                     </select>
                     <p className="mt-1 text-[11px] text-gray-500">Penghapusan legal, mutasi, dan koreksi memerlukan persetujuan di luar form DRAFT.</p>
                   </div>
@@ -970,10 +998,10 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
       {/* Delete Asset Confirmation Modal */}
       <ConfirmModal
         isOpen={deleteModal.isOpen}
-        title="Hapus Data Inventaris Aset"
-        message="Apakah Anda yakin ingin menghapus data inventaris aset ini secara permanen dari sistem?"
+        title="Arsipkan Draft Inventaris Aset"
+        message="Arsipkan draft ini tanpa menghapus catatan, bukti, atau foto? Identitas dan jejak audit tetap tersimpan. Aset yang sudah disahkan memerlukan persetujuan penghapusan terpisah."
         itemName={deleteModal.asset ? `${deleteModal.asset.asset_name} (Kode: ${deleteModal.asset.asset_code || '-'}, Kategori: ${deleteModal.asset.asset_category})` : undefined}
-        confirmLabel="Hapus Aset"
+        confirmLabel="Arsipkan Draft"
         cancelLabel="Batal"
         loading={deleteModal.deleting}
         error={deleteModal.error}
