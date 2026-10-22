@@ -158,6 +158,8 @@ export type AssetCategory =
 
 export interface Asset {
   asset_id: string;
+  /** Nomor Aset yang diisi operator, terpisah dari PAID dan DIC. */
+  asset_number?: string;
   school_id: string;
   /** Historical asset code remains for backwards compatibility (not a new DIC). */
   asset_code?: string;
