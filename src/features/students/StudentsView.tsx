@@ -10,13 +10,13 @@ import {StudentForm} from './StudentForm';
 
 interface Props{
  schools:School[];classes:ClassroomEnrollment[];students:StudentRecord[];
- movements:StudentMovement[];onRefresh:()=>Promise<void>|void;
+ movements:StudentMovement[];initialSchoolId?:string|null;onRefresh:()=>Promise<void>|void;
 }
-export const StudentsView:React.FC<Props>=({schools,classes,students,movements,onRefresh})=>{
+export const StudentsView:React.FC<Props>=({schools,classes,students,movements,initialSchoolId,onRefresh})=>{
  const {hasSchoolAccess}=useAuth();
  const {activeAcademicYear}=useAcademicYears();
  const visibleSchools=schools.filter(s=>hasSchoolAccess(s.school_id));
- const [schoolId,setSchoolId]=useState('');
+ const [schoolId,setSchoolId]=useState(initialSchoolId||'');
  const [semester,setSemester]=useState<Semester>('Ganjil');
  const [preview,setPreview]=useState<DapodikPreview|null>(null);
  const [mapping,setMapping]=useState<Record<string,string>>({});
