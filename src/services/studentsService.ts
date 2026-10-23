@@ -36,7 +36,7 @@ export const studentsService={
  },
  /** A manual form creates or edits the same canonical student collection as the Dapodik import.
   * Validate school, classroom, academic period and duplicated official identifiers at save time. */
- async saveStudent(record:StudentRecord):Promise<void>{
+ async saveStudent(record:StudentRecord,isEditing:boolean=false):Promise<void>{
    if(!record.school_id||!record.student_id||!record.full_name.trim()||!['L','P'].includes(record.gender)){
      throw new Error('Sekolah, nama peserta didik, dan jenis kelamin wajib diisi.');
    }
@@ -51,6 +51,8 @@ export const studentsService={
      throw new Error('Tingkat Kelas dan Nama Rombel harus sesuai dengan Master Rombel sekolah serta periode aktif.');
    }
    const old=await getDoc(doc(db,'schools',record.school_id,'students',record.student_id));
+   if(isEditing && !old.exists())throw new Error('Data murid yang akan diedit tidak ditemukan. Muat ulang daftar.');
+   if(!isEditing && old.exists())throw new Error('Identitas peserta didik sudah terdaftar. Gunakan Edit pada daftar peserta didik.');
    if(old.exists()){
      const previous=old.data() as StudentRecord;
      if(previous.school_id!==record.school_id||previous.academic_year!==record.academic_year||previous.semester!==record.semester){
