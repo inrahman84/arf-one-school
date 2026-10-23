@@ -326,12 +326,13 @@ const MainAppContent: React.FC = () => {
               studentMovements={studentMovements}
               onRefresh={loadAllData}
               onManageAcademicYears={() => setActiveTab('academicYears')}
+              onManageStudents={(schoolId)=>{setSelectedSchoolId(schoolId);setActiveTab('students');}}
             />
           )}
 
           {activeTab === 'students' && (
             <StudentsView schools={schools} classes={classes} students={students}
-              movements={studentMovements} onRefresh={loadAllData} />
+              movements={studentMovements} initialSchoolId={selectedSchoolId} onRefresh={loadAllData} />
           )}
 
           {activeTab === 'hr' && (
