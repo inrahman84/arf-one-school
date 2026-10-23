@@ -23,7 +23,7 @@ test('Sumber Daya data siswa has add/edit form and reflects the master class',()
  assert.match(students,/<StudentForm/);
  assert.match(students,/setEditingStudent\(s\)/);
  assert.match(students,/setShowStudentForm\(true\)/);
- assert.match(students,/classes=\{currentClasses\}/);
+ assert.match(students,/classes=\{classes\}/);
  assert.match(students,/await onRefresh\(\)/);
  assert.match(students,/Jumlah murid pada Rombel & Peserta Didik diperbarui otomatis/);
 });
