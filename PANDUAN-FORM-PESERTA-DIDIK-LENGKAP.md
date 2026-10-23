@@ -39,3 +39,14 @@ Permintaan mencampurkan *Nama di KIP* dengan indikator numerik 1/0. Implementasi
 7. **Impor Daftar Peserta Didik (Dapodik)** sekarang berada di bagian paling bawah halaman Data Peserta Didik.
 
 Catatan: lakukan uji antarmuka oleh operator berwenang dengan data uji sebelum menerapkan untuk seluruh sekolah.
+
+## Pembaruan Form Pop-up, Aksi Daftar, dan Wali Kelas (23 Oktober 2026)
+
+- Tombol **Tambah Peserta Didik** dan **Edit** menampilkan formulir lengkap di **pop-up yang dapat di-scroll**, mendukung penutupan melalui tombol Tutup, Escape, atau klik area luar.
+- **Sekolah** berupa dropdown dari **Manajemen Sekolah → Daftar Sekolah**, dibatasi pada sekolah yang dapat diakses akun. Saat **Tambah**, sekolah dapat dipilih dan opsi Tingkat Kelas/Nama Rombel diperbarui berdasarkan sekolah dan Tahun Ajaran/Semester. Saat **Edit**, sekolah dikunci untuk melindungi relasi dan riwayat; pindah sekolah ditangani melalui prosedur mutasi.
+- Pada tabel **Daftar dan Pemetaan Rombel** di Sumber Daya → Data Peserta Didik, setiap murid mempunyai **Edit** dan, untuk petugas berwenang, **Hapus** dengan konfirmasi. Hapus berarti **soft archive**, tidak memusnahkan informasi privat atau log mutasi. Peserta didik yang diarsipkan dikeluarkan dari hitungan aktif dan tidak diaktifkan otomatis oleh impor ulang.
+- Kontrol pemilihan file Dapodik kini memiliki tombol berwarna hijau gelap **Pilih File Excel Dapodik**, ikon Excel, dan status nama file terpilih.
+- Formulir **Manajemen Sekolah → Rombel & Peserta Didik** hanya menampilkan lima isian: **Sekolah**, **Tingkat Kelas**, **Nama Rombel**, **Kapasitas Maksimal**, dan **Wali Kelas**. Wali Kelas berupa pilihan Guru berstatus Aktif dari sekolah yang dipilih, disimpan sebagai `homeroom_staff_id` dan nama untuk display.
+- Total murid laki-laki, perempuan, mutasi dan DO **tidak dihapus dari data**. Semua tetap dihitung dari register murid dan log mutasi pada daftar, ringkasan serta dashboard; data lama/manual tetap kompatibel.
+- Edit sekolah pada Master Rombel dinonaktifkan agar referensi murid di sekolah asal tidak rusak. Bila guru lama tidak aktif, pilih ulang Guru aktif atau biarkan Wali Kelas belum ditetapkan.
+- Perubahan berlaku pada repository `inrahman84/arf-one-school` dan tidak mengubah `arfteamplanner`. Validasi browser dengan pengguna sekolah masih perlu dilakukan sebelum digunakan untuk seluruh sekolah.
