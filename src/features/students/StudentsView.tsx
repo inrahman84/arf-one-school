@@ -13,7 +13,8 @@ interface Props{
  movements:StudentMovement[];initialSchoolId?:string|null;onRefresh:()=>Promise<void>|void;
 }
 export const StudentsView:React.FC<Props>=({schools,classes,students,movements,initialSchoolId,onRefresh})=>{
- const {hasSchoolAccess}=useAuth();
+ const {hasSchoolAccess,effectiveRole}=useAuth();
+ const canManagePrivate=['SUPER_ADMIN','SCHOOL_PRINCIPAL','SCHOOL_OPERATOR'].includes(effectiveRole);
  const {activeAcademicYear}=useAcademicYears();
  const visibleSchools=schools.filter(s=>hasSchoolAccess(s.school_id));
  const [schoolId,setSchoolId]=useState(initialSchoolId||'');
@@ -143,6 +144,8 @@ export const StudentsView:React.FC<Props>=({schools,classes,students,movements,i
       key={editingStudent?.student_id||'student-new'}
       schoolId={schoolId}
       schoolName={selectedSchool?.school_name||''}
+      educationLevel={selectedSchool?.education_level||''}
+      canManagePrivate={canManagePrivate}
       academicYear={year}
       semester={semester}
       classes={currentClasses}
@@ -151,29 +154,6 @@ export const StudentsView:React.FC<Props>=({schools,classes,students,movements,i
       onSaved={async()=>{await onRefresh();setShowStudentForm(false);setEditingStudent(null);
         setNotice('Data peserta didik tersimpan. Jumlah murid pada Rombel & Peserta Didik diperbarui otomatis.');}}
    />}
-   <section className="rounded-xl border bg-white p-4 space-y-3">
-     <h3 className="font-bold flex items-center gap-2"><Upload size={16}/> Impor Daftar Peserta Didik (Dapodik)</h3>
-     <p className="text-xs text-gray-600">Hanya data minimum yang diimpor. File asli, NIK, alamat, data orang tua, bantuan, rekening dan kesehatan tidak disimpan. Semua impor dikaitkan ke sekolah, tahun ajaran dan semester.</p>
-     {!year&&<p className="text-xs font-semibold text-amber-700">Super Admin perlu mengaktifkan Tahun Ajaran pada Administrasi Sistem.</p>}
-     <input type="file" accept=".xlsx,.xls" disabled={busy||!year||!schoolId}
-       aria-label="Pilih file Dapodik" onChange={e=>void handleFile(e.target.files?.[0])} className="text-xs max-w-full"/>
-     {preview&&<div className="space-y-3 rounded-lg border bg-[#f6f3ec] p-3">
-       <p className="text-sm"><strong>{preview.rows.length}</strong> baris valid · {preview.rombelLabels.length} label rombel · {preview.duplicate} duplikat · {preview.rejected} baris invalid · snapshot {preview.snapshotDate}</p>
-       <p className="text-xs">Sumber: {preview.schoolLabel||'Tidak terbaca'} · Sekolah tujuan: {selectedSchool?.school_name||'—'}</p>
-       {!sourceMatches&&<label className="flex gap-2 items-start text-xs text-amber-800"><input type="checkbox" checked={confirmSchool} onChange={e=>setConfirmSchool(e.target.checked)}/>Saya memastikan file Dapodik memang berasal dari sekolah tujuan. Nama sekolah pada kedua sumber tidak identik.</label>}
-       <p className="text-xs font-semibold">Pemetaan rombel dapat diisi sekarang atau setelah impor. Label yang belum terpetakan tetap tercatat dan tidak otomatis digabung ke rombel lain.</p>
-       {preview.rombelLabels.map(label=><div key={label} className="grid grid-cols-1 sm:grid-cols-2 gap-2 items-center">
-         <span className="text-xs font-semibold">{label} ({preview.rows.filter(x=>x.source_rombel===label).length} murid)</span>
-         <select className={input} value={mapping[label]||''} onChange={e=>setMapping(p=>({...p,[label]:e.target.value}))}>
-           <option value="">Belum dipetakan</option>
-           {currentClasses.map(c=><option key={c.class_id} value={c.class_id}>{c.class_name} · {c.grade_level}</option>)}
-         </select></div>)}
-       <button type="button" disabled={busy||(!sourceMatches&&!confirmSchool)} onClick={()=>void importData()}
-         className="rounded-lg bg-[#073b2d] text-white px-4 py-2.5 text-xs font-semibold disabled:opacity-50">
-         {busy?'Menyimpan '+progress+'/'+preview.rows.length:'Validasi & Impor Peserta Didik'}
-       </button>
-     </div>}
-   </section>
    <section className="rounded-xl border bg-white p-4 space-y-3">
      <h3 className="font-bold flex items-center gap-2"><Users size={16}/> Daftar dan Pemetaan Rombel</h3>
      <p className="text-xs text-gray-600">Pemetaan bisa diterapkan secara massal berdasarkan label Rombel Saat Ini dari Dapodik.</p>
@@ -217,6 +197,29 @@ export const StudentsView:React.FC<Props>=({schools,classes,students,movements,i
        <button disabled={busy||!subset.length||!currentClasses.length} className="self-end rounded-lg bg-[#073b2d] text-white px-4 py-2.5 text-xs font-semibold disabled:opacity-50">Catat Mutasi</button>
      </form>
      <div className="text-xs text-gray-700">Mutasi tercatat periode ini: {movementsHere.filter(x=>x.event_type==='TRANSFER_IN').length} masuk · {movementsHere.filter(x=>x.event_type==='TRANSFER_OUT').length} pindah keluar · {movementsHere.filter(x=>x.event_type==='DROPOUT').length} DO</div>
+   </section>
+   <section className="rounded-xl border bg-white p-4 space-y-3">
+     <h3 className="font-bold flex items-center gap-2"><Upload size={16}/> Impor Daftar Peserta Didik (Dapodik)</h3>
+     <p className="text-xs text-gray-600">Impor massal tetap mengambil data minimum: nama, identitas sekolah, jenis kelamin dan rombel. Data sensitif dari dokumen Excel tidak otomatis masuk ke formulir pribadi. Semua impor dikaitkan ke sekolah, tahun ajaran dan semester.</p>
+     {!year&&<p className="text-xs font-semibold text-amber-700">Super Admin perlu mengaktifkan Tahun Ajaran pada Administrasi Sistem.</p>}
+     <input type="file" accept=".xlsx,.xls" disabled={busy||!year||!schoolId}
+       aria-label="Pilih file Dapodik" onChange={e=>void handleFile(e.target.files?.[0])} className="text-xs max-w-full"/>
+     {preview&&<div className="space-y-3 rounded-lg border bg-[#f6f3ec] p-3">
+       <p className="text-sm"><strong>{preview.rows.length}</strong> baris valid · {preview.rombelLabels.length} label rombel · {preview.duplicate} duplikat · {preview.rejected} baris invalid · snapshot {preview.snapshotDate}</p>
+       <p className="text-xs">Sumber: {preview.schoolLabel||'Tidak terbaca'} · Sekolah tujuan: {selectedSchool?.school_name||'—'}</p>
+       {!sourceMatches&&<label className="flex gap-2 items-start text-xs text-amber-800"><input type="checkbox" checked={confirmSchool} onChange={e=>setConfirmSchool(e.target.checked)}/>Saya memastikan file Dapodik memang berasal dari sekolah tujuan. Nama sekolah pada kedua sumber tidak identik.</label>}
+       <p className="text-xs font-semibold">Pemetaan rombel dapat diisi sekarang atau setelah impor. Label yang belum terpetakan tetap tercatat dan tidak otomatis digabung ke rombel lain.</p>
+       {preview.rombelLabels.map(label=><div key={label} className="grid grid-cols-1 sm:grid-cols-2 gap-2 items-center">
+         <span className="text-xs font-semibold">{label} ({preview.rows.filter(x=>x.source_rombel===label).length} murid)</span>
+         <select className={input} value={mapping[label]||''} onChange={e=>setMapping(p=>({...p,[label]:e.target.value}))}>
+           <option value="">Belum dipetakan</option>
+           {currentClasses.map(c=><option key={c.class_id} value={c.class_id}>{c.class_name} · {c.grade_level}</option>)}
+         </select></div>)}
+       <button type="button" disabled={busy||(!sourceMatches&&!confirmSchool)} onClick={()=>void importData()}
+         className="rounded-lg bg-[#073b2d] text-white px-4 py-2.5 text-xs font-semibold disabled:opacity-50">
+         {busy?'Menyimpan '+progress+'/'+preview.rows.length:'Validasi & Impor Peserta Didik'}
+       </button>
+     </div>}
    </section>
  </div>;
 };
