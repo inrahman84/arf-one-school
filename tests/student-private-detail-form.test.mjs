@@ -45,7 +45,7 @@ test('Special needs and age-limited head circumference selection are complete',(
   assert.ok(logic.includes(phrase), 'Missing special needs option: '+phrase);
  }
  assert.match(logic,/\['TPA','TK','SD'\]\.includes\(level\)/);
- assert.match(ui,/supportsHeadCircumference\(educationLevel\)/);
+ assert.match(ui,/supportsHeadCircumference\(currentLevel\)/);
 });
 
 test('Coordinates come from selecting point on map, not from device geolocation',()=>{
