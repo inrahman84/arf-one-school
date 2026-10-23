@@ -120,6 +120,10 @@ export interface StudentRecord {
   gender: 'L'|'P';
   source_rombel: string;
   grade_hint?: string;
+  /** Grade resolved from the master class record, for display and exports. */
+  grade_level?: string;
+  /** Class name snapshot, the canonical relation is class_id. */
+  class_name?: string;
   class_id?: string;
   academic_year: string;
   semester: Semester;
