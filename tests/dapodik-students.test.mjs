@@ -33,8 +33,8 @@ test('classrooms derive gender counts and mutation figures from student records'
  assert.match(view,/const calcCounts=/);
  assert.match(view,/draftCounts\.male/);
  assert.match(view,/draftCounts\.female/);
- assert.match(view,/draftCounts\.incoming/);
- assert.match(view,/readOnly=\{draftCounts.active\}/);
+ assert.match(view,/incoming:active\?move\.transferIn/);
+ assert.match(view,/dropout:active\?move\.dropout/);
  assert.match(view,/schoolsWithRoster/);
 });
 test('executive teacher planning prioritizes mapped real rosters with source quality flags',()=>{
