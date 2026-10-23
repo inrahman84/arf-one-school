@@ -92,8 +92,10 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({
 
   const accessibleSchools = schools.filter(s => hasSchoolAccess(s.school_id));
   const calcCounts=(cls:ClassroomEnrollment)=>{
-    const roster=currentRoster(students.filter(x=>x.school_id===cls.school_id&&x.academic_year===cls.academic_year&&x.semester===cls.semester),studentMovements);
-    const active=roster.length>0;
+    const imported=students.filter(x=>x.school_id===cls.school_id&&x.academic_year===cls.academic_year&&x.semester===cls.semester);
+    const roster=currentRoster(imported,studentMovements);
+    // An empty effective roster after verified exits must not fall back to stale manual counts.
+    const active=imported.length>0;
     const people=rosterCounts(roster,cls.class_id,cls.academic_year,cls.semester);
     const move=movementCounts(studentMovements,cls.class_id,cls.academic_year,cls.semester);
     return {male:active?people.male:cls.male_students,
