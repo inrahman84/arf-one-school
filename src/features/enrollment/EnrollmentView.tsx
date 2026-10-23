@@ -285,7 +285,7 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({
   );
   const totalCapacity = filteredClasses.reduce((sum, c) => sum + (Number(c.class_capacity) || 0), 0);
   const overcapacityCount = filteredClasses.filter(c => {
-    const total = (Number(c.male_students) || 0) + (Number(c.female_students) || 0);
+    const total = calcCounts(c).male + calcCounts(c).female;
     return c.class_capacity > 0 && total > c.class_capacity;
   }).length;
 
@@ -674,6 +674,11 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({
                 </div>
               </div>
 
+              <p className={`rounded-lg border p-3 text-xs ${draftCounts.active?'border-emerald-200 bg-emerald-50 text-emerald-800':'border-amber-200 bg-amber-50 text-amber-800'}`}>
+                {draftCounts.active
+                  ? 'Otomatis dari register peserta didik dan log mutasi. Periksa murid yang belum dipetakan pada Sumber Daya → Data Peserta Didik.'
+                  : 'Belum ada register peserta didik untuk periode ini. Nilai masih berasal dari pengisian rombel sebelumnya.'}
+              </p>
               {/* Total preview */}
               <div className="p-3 bg-gray-50 rounded-lg text-xs flex items-center justify-between">
                 <span>Total Murid yang Dihitung:</span>
