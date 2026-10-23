@@ -65,7 +65,7 @@ export const StudentForm:React.FC<Props>=({
        class_name:chosen.class_name,academic_year:academicYear,semester,
        snapshot_date:existing?.snapshot_date||now.slice(0,10),
        imported_at:existing?.imported_at||now,updated_at:now
-     });
+     },Boolean(existing));
      await onSaved();
    }catch(err){setError(err instanceof Error?err.message:'Data peserta didik gagal disimpan.')}
    finally{setSubmitting(false)}
