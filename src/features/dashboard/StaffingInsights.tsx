@@ -1,15 +1,16 @@
 import React,{useMemo,useState} from 'react';
 import {BarChart,Bar,XAxis,YAxis,Tooltip,Legend,CartesianGrid,ResponsiveContainer} from 'recharts';
-import {ClassroomEnrollment,School,Staff,StudentRecord,Semester} from '../../types';
+import {ClassroomEnrollment,School,Staff,StudentRecord,StudentMovement,Semester} from '../../types';
 import {estimateTeacherNeeds} from '../../lib/staffingAnalytics';
+import {currentRoster} from '../../lib/studentActivity';
 
-interface Props{schools:School[];classes:ClassroomEnrollment[];staff:Staff[];students:StudentRecord[];
+interface Props{schools:School[];classes:ClassroomEnrollment[];staff:Staff[];students:StudentRecord[];movements:StudentMovement[];
  academicYear:string;semester:Semester;}
-export const StaffingInsights:React.FC<Props>=({schools,classes,staff,students,academicYear,semester})=>{
+export const StaffingInsights:React.FC<Props>=({schools,classes,staff,students,movements,academicYear,semester})=>{
  const [target,setTarget]=useState(25);
- const data=useMemo(()=>estimateTeacherNeeds(schools,classes,staff,students,academicYear,semester,target),
-   [schools,classes,staff,students,academicYear,semester,target]);
- const active=data.filter(x=>x.students>0);
+ const data=useMemo(()=>estimateTeacherNeeds(schools,classes,staff,currentRoster(students,movements),academicYear,semester,target,[...new Set(students.map(s=>s.school_id))]),
+   [schools,classes,staff,students,movements,academicYear,semester,target]);
+ const active=data.filter(x=>x.students>0||x.source==='DAPODIK');
  const totals={
    students:active.reduce((sum,x)=>sum+x.students,0),
    teachers:active.reduce((sum,x)=>sum+x.activeTeachers,0),
