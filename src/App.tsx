@@ -321,6 +321,7 @@ const MainAppContent: React.FC = () => {
           {activeTab === 'enrollment' && (
             <EnrollmentView
               schools={schools}
+              staff={staff}
               classes={classes}
               students={students}
               studentMovements={studentMovements}
