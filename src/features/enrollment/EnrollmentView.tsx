@@ -261,12 +261,12 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({
     try {
       await enrollmentService.saveClass({
         ...formData,
-        male_students: Number(formData.male_students) || 0,
-        female_students: Number(formData.female_students) || 0,
+        male_students: draftCounts.male,
+        female_students: draftCounts.female,
         class_capacity: Number(formData.class_capacity) || 0,
-        transfer_in: Number(formData.transfer_in) || 0,
-        transfer_out: Number(formData.transfer_out) || 0,
-        dropout_students: Number(formData.dropout_students) || 0,
+        transfer_in: draftCounts.incoming,
+        transfer_out: draftCounts.outgoing,
+        dropout_students: draftCounts.dropout,
         created_at: editingClass ? editingClass.created_at : new Date().toISOString()
       });
       setModalOpen(false);
@@ -280,7 +280,7 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({
 
   // Metrics
   const totalStudents = filteredClasses.reduce(
-    (sum, c) => sum + (Number(c.male_students) || 0) + (Number(c.female_students) || 0),
+    (sum, c) => sum + calcCounts(c).male + calcCounts(c).female,
     0
   );
   const totalCapacity = filteredClasses.reduce((sum, c) => sum + (Number(c.class_capacity) || 0), 0);
@@ -417,8 +417,8 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({
             <tbody className="divide-y divide-gray-200">
               {filteredClasses.map(cls => {
                 const sch = schools.find(s => s.school_id === cls.school_id);
-                const male = Number(cls.male_students) || 0;
-                const female = Number(cls.female_students) || 0;
+                const male = calcCounts(cls).male;
+                const female = calcCounts(cls).female;
                 const total = male + female;
                 const cap = Number(cls.class_capacity) || 0;
                 const isOver = cap > 0 && total > cap;
@@ -628,7 +628,8 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({
                   <input
                     type="number"
                     min="0"
-                    value={formData.male_students}
+                    value={draftCounts.male}
+                    readOnly={draftCounts.active}
                     onChange={(e) => setFormData({ ...formData, male_students: Number(e.target.value) })}
                     className="w-full text-xs p-2 rounded-lg border border-gray-300"
                     required
@@ -640,7 +641,8 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({
                   <input
                     type="number"
                     min="0"
-                    value={formData.female_students}
+                    value={draftCounts.female}
+                    readOnly={draftCounts.active}
                     onChange={(e) => setFormData({ ...formData, female_students: Number(e.target.value) })}
                     className="w-full text-xs p-2 rounded-lg border border-gray-300"
                     required
@@ -652,7 +654,8 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({
                   <input
                     type="number"
                     min="0"
-                    value={formData.transfer_in}
+                    value={draftCounts.incoming}
+                    readOnly={draftCounts.active}
                     onChange={(e) => setFormData({ ...formData, transfer_in: Number(e.target.value) })}
                     className="w-full text-xs p-2 rounded-lg border border-gray-300"
                   />
@@ -663,7 +666,8 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({
                   <input
                     type="number"
                     min="0"
-                    value={formData.dropout_students}
+                    value={draftCounts.dropout}
+                    readOnly={draftCounts.active}
                     onChange={(e) => setFormData({ ...formData, dropout_students: Number(e.target.value) })}
                     className="w-full text-xs p-2 rounded-lg border border-gray-300"
                   />
@@ -674,7 +678,7 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({
               <div className="p-3 bg-gray-50 rounded-lg text-xs flex items-center justify-between">
                 <span>Total Murid yang Dihitung:</span>
                 <strong className="text-gray-900 text-sm">
-                  {(Number(formData.male_students) || 0) + (Number(formData.female_students) || 0)} Siswa
+                  {draftCounts.male + draftCounts.female} Siswa
                 </strong>
               </div>
 
