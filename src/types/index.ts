@@ -108,6 +108,39 @@ export interface ClassroomEnrollment {
   updated_at: string;
 }
 
+
+/** Minimal individual roster obtained from a school-authorized Dapodik snapshot.
+ * Sensitive family, NIK, address, banking and health fields are NOT imported. */
+export interface StudentRecord {
+  student_id: string;
+  school_id: string;
+  full_name: string;
+  nisn?: string;
+  nipd?: string;
+  gender: 'L'|'P';
+  source_rombel: string;
+  grade_hint?: string;
+  class_id?: string;
+  academic_year: string;
+  semester: Semester;
+  snapshot_date: string;
+  imported_at: string;
+  updated_at: string;
+}
+export type StudentMovementType = 'TRANSFER_IN'|'TRANSFER_OUT'|'DROPOUT';
+export interface StudentMovement {
+  event_id: string;
+  school_id: string;
+  student_id: string;
+  class_id: string;
+  academic_year: string;
+  semester: Semester;
+  event_type: StudentMovementType;
+  event_date: string;
+  reference_note: string;
+  created_at: string;
+}
+
 export type StaffCategory = 'Guru' | 'Kepala Sekolah' | 'Tenaga Kependidikan' | 'Lainnya';
 export type EmploymentStatus = 'Aktif' | 'Cuti' | 'Nonaktif' | 'Berakhir';
 export type EmploymentType = 'Tetap' | 'Kontrak' | 'Honorer' | 'Lainnya';
