@@ -1,10 +1,28 @@
 import {collection,doc,getDoc,getDocs,setDoc} from '../lib/documentStore';
 import {db} from '../lib/backend';
 import {supabase} from '../lib/supabase';
-import {StudentRecord,StudentMovement,ClassroomEnrollment} from '../types';
+import {StudentRecord,StudentMovement,ClassroomEnrollment,StudentPrivateDetails} from '../types';
 import {auditService} from './auditService';
 
 export const studentsService={
+ /** Confidential information: never returned by getBySchool / getAll or executive reports. */
+ async getPrivateDetails(schoolId:string,studentId:string):Promise<StudentPrivateDetails|null>{
+   const snap=await getDoc(doc(db,'schools',schoolId,'studentPrivate',studentId));
+   return snap.exists()?snap.data() as StudentPrivateDetails:null;
+ },
+ async savePrivateDetails(record:StudentPrivateDetails):Promise<void>{
+   if(!record.student_id||!record.school_id)throw new Error('Identitas referensi data pribadi tidak lengkap.');
+   const child=await getDoc(doc(db,'schools',record.school_id,'students',record.student_id));
+   if(!child.exists()||child.data().school_id!==record.school_id){
+     throw new Error('Data peserta didik harus tersimpan dahulu sebelum menyimpan data rinci.');
+   }
+   await setDoc(doc(db,'schools',record.school_id,'studentPrivate',record.student_id),{
+     ...record,updated_at:new Date().toISOString()
+   });
+   // Avoid values or private field names in audit details.
+   void auditService.log('UPDATE_STUDENT_PRIVATE','StudentRecord',record.student_id,record.school_id,
+     'Data rinci peserta didik diperbarui').catch(()=>{});
+ },
  async getBySchool(schoolId:string):Promise<StudentRecord[]>{
    const snap=await getDocs(collection(db,'schools',schoolId,'students'));
    return snap.docs.map(d=>({...d.data(),student_id:d.id})) as StudentRecord[];
