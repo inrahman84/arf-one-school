@@ -1,4 +1,4 @@
-import {collection,doc,getDoc,getDocs,setDoc} from '../lib/documentStore';
+import {collection,doc,getDoc,getDocs,setDoc,updateDoc} from '../lib/documentStore';
 import {db} from '../lib/backend';
 import {supabase} from '../lib/supabase';
 import {StudentRecord,StudentMovement,ClassroomEnrollment,StudentPrivateDetails} from '../types';
@@ -25,7 +25,8 @@ export const studentsService={
  },
  async getBySchool(schoolId:string):Promise<StudentRecord[]>{
    const snap=await getDocs(collection(db,'schools',schoolId,'students'));
-   return snap.docs.map(d=>({...d.data(),student_id:d.id})) as StudentRecord[];
+   return snap.docs.map(d=>({...d.data(),student_id:d.id}))
+     .filter(row=>!row.archived_at) as StudentRecord[];
  },
  async getAll(schoolIds:string[]):Promise<StudentRecord[]>{
    const groups=await Promise.all(schoolIds.map(async sid=>{
@@ -40,6 +41,10 @@ export const studentsService={
    const unique=new Set(records.map(x=>x.student_id));
    if(unique.size!==records.length)throw new Error('Duplikasi ID peserta didik dalam berkas.');
    const path='schools/'+schoolId+'/students';
+   const snapshot=await getDocs(collection(db,'schools',schoolId,'students'));
+   const archivedIds=new Set(snapshot.docs.filter(row=>Boolean(row.data().archived_at)).map(row=>row.id));
+   if(records.some(row=>archivedIds.has(row.student_id)))throw new Error(
+     'File memuat peserta didik yang telah diarsipkan. Hubungi administrator untuk meninjau sebelum impor ulang.');
    for(let i=0;i<records.length;i+=60){
      const batch=records.slice(i,i+60).map(s=>({
        path:path+'/'+s.student_id,collection_path:path,doc_id:s.student_id,school_id:schoolId,content:s
@@ -69,6 +74,7 @@ export const studentsService={
      throw new Error('Tingkat Kelas dan Nama Rombel harus sesuai dengan Master Rombel sekolah serta periode aktif.');
    }
    const old=await getDoc(doc(db,'schools',record.school_id,'students',record.student_id));
+   if(old.exists()&&old.data().archived_at)throw new Error('Peserta didik sudah diarsipkan dan tidak dapat diedit langsung.');
    if(isEditing && !old.exists())throw new Error('Data murid yang akan diedit tidak ditemukan. Muat ulang daftar.');
    if(!isEditing && old.exists())throw new Error('Identitas peserta didik sudah terdaftar. Gunakan Edit pada daftar peserta didik.');
    if(old.exists()){
@@ -93,6 +99,20 @@ export const studentsService={
    });
    void auditService.log(old.exists()?'EDIT_STUDENT':'ADD_STUDENT','StudentRecord',record.student_id,record.school_id,
      'Simpan peserta didik dengan rombel '+record.class_id).catch(console.warn);
+ },
+ /** Hapus from the UI archives a roster row. Child private details and movement evidence
+  * are kept under existing RLS; no orphaned or irreversible deletion of records. */
+ async archiveStudent(schoolId:string,studentId:string):Promise<void>{
+   if(!schoolId||!studentId)throw new Error('Sekolah dan peserta didik wajib dipilih.');
+   const ref=doc(db,'schools',schoolId,'students',studentId);
+   const current=await getDoc(ref);
+   if(!current.exists())throw new Error('Data peserta didik tidak ditemukan.');
+   const record=current.data() as StudentRecord;
+   if(record.school_id!==schoolId)throw new Error('Peserta didik tidak berasal dari sekolah ini.');
+   if(record.archived_at)throw new Error('Peserta didik sudah berada di arsip.');
+   await updateDoc(ref,{archived_at:new Date().toISOString(),updated_at:new Date().toISOString()});
+   void auditService.log('ARCHIVE_STUDENT','StudentRecord',studentId,schoolId,
+     'Data peserta didik diarsipkan tanpa menghapus bukti dan riwayat').catch(()=>{});
  },
  async mapRombel(schoolId:string,students:StudentRecord[],sourceLabel:string,classId:string):Promise<number>{
    const target=await getDoc(doc(db,'schools',schoolId,'classes',classId));
