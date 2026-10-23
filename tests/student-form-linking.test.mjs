@@ -7,7 +7,7 @@ test('manual student form exposes grade and class from the same school year seme
  const ui=source('src/features/students/StudentForm.tsx');
  assert.match(ui,/Tingkat Kelas \*/);
  assert.match(ui,/Rombel Saat Ini \/ Kelas \(Nama Rombel\) \*/);
- assert.match(ui,/c\.school_id===schoolId&&c\.academic_year===academicYear&&c\.semester===semester/);
+ assert.match(ui,/c\.school_id===selectedSchoolId&&c\.academic_year===academicYear&&c\.semester===semester/);
  assert.match(ui,/const matching=options\.filter\(c=>c\.grade_level===grade\)/);
  assert.match(ui,/onChange=\{e=>\{setGrade\(e\.target\.value\);setClassId\(''\)\}\}/);
  assert.match(ui,/class_id:chosen\.class_id/);
