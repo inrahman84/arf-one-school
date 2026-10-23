@@ -62,3 +62,7 @@ Aplikasi production: https://arf-one-school.vercel.app/. Repository GitHub `inra
 - Status operasional yang tersedia untuk input baru: **Aktif Memiliki Izin Operasional**, **Aktif Tidak Memiliki Izin Operasional**, dan **Tidak Aktif**. Status lama tetap terbaca; tidak dipetakan otomatis ke status perizinan baru.
 - Nama Kepala Sekolah pada formulir Tambah/Edit berasal dari pilihan Guru/Kepala Sekolah aktif di **sekolah yang sama**. Tersimpan sebagai pasangan ID PTK dan nama; sekolah tetap dapat dibuat sebelum PTK dimasukkan.
 - Panduan terperinci: [UPDATE-RESPONSIVE-STATUS-PTK.md](./UPDATE-RESPONSIVE-STATUS-PTK.md).
+
+## Rilis Form Inventaris Terbaru (23 Oktober 2026)
+
+Versi sumber yang siap diterbitkan memuat perbaikan formulir inventaris: label School ID, penghilangan teks bantuan yang diminta, nomor polisi TNBK khusus kategori KND Kendaraan, dan penyempurnaan Model/Tipe serta Spesifikasi Singkat. Pengujian build GitHub Actions untuk commit sumber `558db428` telah lulus. Catatan ini memicu ulang integrasi GitHub ke proyek Vercel `arf-one-school` untuk mencoba penerbitan production; status akhir deployment wajib diperiksa dari status Vercel, karena batas frekuensi deployment dapat menolak permintaan.
