@@ -13,6 +13,7 @@ import { SchoolsListView } from './features/schools/SchoolsListView';
 import { SchoolDetailView } from './features/schools/SchoolDetailView';
 import { EnrollmentView } from './features/enrollment/EnrollmentView';
 import { HRView } from './features/hr/HRView';
+import { StudentsView } from './features/students/StudentsView';
 import { AssetsView } from './features/assets/AssetsView';
 import { FacilitiesView } from './features/facilities/FacilitiesView';
 import { DataImportView } from './features/imports/DataImportView';
@@ -28,6 +29,7 @@ import { regionsService } from './services/regionsService';
 import { schoolsService } from './services/schoolsService';
 import { enrollmentService } from './services/enrollmentService';
 import { hrService } from './services/hrService';
+import { studentsService } from './services/studentsService';
 import { assetsService } from './services/assetsService';
 import { facilitiesService } from './services/facilitiesService';
 import { verificationService } from './services/verificationService';
@@ -36,6 +38,8 @@ import {
   Region,
   ClassroomEnrollment,
   Staff,
+  StudentRecord,
+  StudentMovement,
   Asset,
   Facility,
   SubmissionReview
@@ -65,6 +69,8 @@ const MainAppContent: React.FC = () => {
   const [schools, setSchools] = useState<School[]>([]);
   const [classes, setClasses] = useState<ClassroomEnrollment[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
+  const [students, setStudents] = useState<StudentRecord[]>([]);
+  const [studentMovements, setStudentMovements] = useState<StudentMovement[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [reviews, setReviews] = useState<SubmissionReview[]>([]);
@@ -87,14 +93,18 @@ const MainAppContent: React.FC = () => {
       setReviews(revList);
 
       const schoolIds = sList.map(s => s.school_id);
-      const [cList, stList, aList, fList] = await Promise.all([
+      const [cList, stList, aList, fList, pdList, movementList] = await Promise.all([
         enrollmentService.getAllClassesAcrossSchools(schoolIds),
         hrService.getAllStaffAcrossSchools(schoolIds),
         assetsService.getAllAssetsAcrossSchools(schoolIds),
-        facilitiesService.getAllFacilitiesAcrossSchools(schoolIds)
+        facilitiesService.getAllFacilitiesAcrossSchools(schoolIds),
+        studentsService.getAll(schoolIds),
+        studentsService.getAllMovements(schoolIds)
       ]);
       setClasses(cList);
       setStaff(stList);
+      setStudents(pdList);
+      setStudentMovements(movementList);
       setAssets(aList);
       setFacilities(fList);
     } catch (e) {
@@ -262,6 +272,8 @@ const MainAppContent: React.FC = () => {
               regions={regions}
               classes={classes}
               staff={staff}
+              students={students}
+              studentMovements={studentMovements}
               assets={assets}
               facilities={facilities}
               reviews={reviews}
@@ -306,16 +318,24 @@ const MainAppContent: React.FC = () => {
             <EnrollmentView
               schools={schools}
               classes={classes}
+              students={students}
+              studentMovements={studentMovements}
               onRefresh={loadAllData}
               onManageAcademicYears={() => setActiveTab('academicYears')}
             />
+          )}
+
+          {activeTab === 'students' && (
+            <StudentsView schools={schools} classes={classes} students={students}
+              movements={studentMovements} onRefresh={loadAllData} />
           )}
 
           {activeTab === 'hr' && (
             <HRView
               schools={schools}
               staff={staff}
-              totalStudents={classes.reduce((sum, c) => sum + (Number(c.male_students) || 0) + (Number(c.female_students) || 0), 0)}
+              totalStudents={students.length>0 ? students.length :
+                classes.reduce((sum, c) => sum + (Number(c.male_students) || 0) + (Number(c.female_students) || 0), 0)}
               onRefresh={loadAllData}
             />
           )}
