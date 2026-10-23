@@ -12,6 +12,7 @@ import {
 import { ClassroomEnrollment, School, Semester, StudentRecord, StudentMovement } from '../../types';
 import { movementCounts } from '../../services/studentsService';
 import { rosterCounts } from '../../lib/dapodikStudents';
+import { currentRoster } from '../../lib/studentActivity';
 import { enrollmentService } from '../../services/enrollmentService';
 import { academicYearsService, normalizeAcademicYear, sortedAcademicYears } from '../../services/academicYearsService';
 import { useAcademicYears } from '../../hooks/useAcademicYears';
@@ -91,7 +92,7 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({
 
   const accessibleSchools = schools.filter(s => hasSchoolAccess(s.school_id));
   const calcCounts=(cls:ClassroomEnrollment)=>{
-    const roster=students.filter(x=>x.school_id===cls.school_id&&x.academic_year===cls.academic_year&&x.semester===cls.semester);
+    const roster=currentRoster(students.filter(x=>x.school_id===cls.school_id&&x.academic_year===cls.academic_year&&x.semester===cls.semester),studentMovements);
     const active=roster.length>0;
     const people=rosterCounts(roster,cls.class_id,cls.academic_year,cls.semester);
     const move=movementCounts(studentMovements,cls.class_id,cls.academic_year,cls.semester);
@@ -284,11 +285,12 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({
   const relevantStudents=students.filter(st=>hasSchoolAccess(st.school_id)&&
     (selectedSchoolId==='ALL'||st.school_id===selectedSchoolId)&&
     (!activeAcademicYear||st.academic_year===activeAcademicYear)&&st.semester===semester);
+  const effectiveStudents=currentRoster(relevantStudents,studentMovements);
   const schoolsWithRoster=new Set(relevantStudents.map(st=>st.school_id));
-  const totalStudents=relevantStudents.length+filteredClasses
+  const totalStudents=effectiveStudents.length+filteredClasses
     .filter(c=>!schoolsWithRoster.has(c.school_id))
     .reduce((sum,c)=>sum+(Number(c.male_students)||0)+(Number(c.female_students)||0),0);
-  const unmappedStudents=relevantStudents.filter(st=>!st.class_id||
+  const unmappedStudents=effectiveStudents.filter(st=>!st.class_id||
     !filteredClasses.some(c=>c.class_id===st.class_id)).length;
   const totalCapacity = filteredClasses.reduce((sum, c) => sum + (Number(c.class_capacity) || 0), 0);
   const overcapacityCount = filteredClasses.filter(c => {
@@ -677,7 +679,7 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({
                   <input
                     type="number"
                     min="0"
-                    value={draftCounts.dropout}
+                    value={draftCounts.active ? draftCounts.outgoing + draftCounts.dropout : draftCounts.dropout}
                     readOnly={draftCounts.active}
                     onChange={(e) => setFormData({ ...formData, dropout_students: Number(e.target.value) })}
                     className="w-full text-xs p-2 rounded-lg border border-gray-300"
