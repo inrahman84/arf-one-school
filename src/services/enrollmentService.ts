@@ -2,6 +2,7 @@ import {
   collection,
   doc,
   getDocs,
+  getDoc,
   setDoc,
   deleteDoc
 } from '../lib/documentStore';
@@ -36,6 +37,15 @@ export const enrollmentService = {
   async saveClass(cls: Omit<ClassroomEnrollment, 'created_at' | 'updated_at'> & { created_at?: string }): Promise<void> {
     const path = `schools/${cls.school_id}/classes/${cls.class_id}`;
     try {
+      if(cls.homeroom_staff_id){
+        const staffSnap=await getDoc(doc(db,'schools',cls.school_id,'staff',cls.homeroom_staff_id));
+        const person=staffSnap.exists()?staffSnap.data():null;
+        if(!person||person.school_id!==cls.school_id||
+          person.employment_status!=='Aktif'||person.staff_category!=='Guru'||
+          person.staff_name!==cls.homeroom_name){
+          throw new Error('Wali Kelas harus dipilih dari Guru aktif pada sekolah yang sama.');
+        }
+      }
       const now = new Date().toISOString();
       const payload: ClassroomEnrollment = {
         ...cls,
@@ -51,6 +61,7 @@ export const enrollmentService = {
       await setDoc(doc(db, 'schools', cls.school_id, 'classes', cls.class_id), payload, { merge: true });
       await auditService.log('SAVE_CLASS', 'ClassroomEnrollment', cls.class_id, cls.school_id, `Rombel: ${cls.class_name} (${cls.academic_year} ${cls.semester})`);
     } catch (error) {
+      if(error instanceof Error && error.message.includes('Wali Kelas harus'))throw error;
       handleSupabaseError(error, OperationType.WRITE, path);
     }
   },
