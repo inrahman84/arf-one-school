@@ -139,10 +139,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   // Calculated KPI Metrics
   const totalStudents = useMemo(() => {
     return filteredSchools.reduce((total,school)=>{
-      const roster=currentRoster(students.filter(x=>x.school_id===school.school_id&&
+      const imported=students.filter(x=>x.school_id===school.school_id&&
         (!filters.academicYear||x.academic_year===filters.academicYear)&&
-        (!filters.semester||x.semester===filters.semester)),studentMovements);
-      if(roster.length)return total+roster.length;
+        (!filters.semester||x.semester===filters.semester));
+      const roster=currentRoster(imported,studentMovements);
+      if(imported.length)return total+roster.length;
       return total+filteredClasses.filter(c=>c.school_id===school.school_id).reduce(
         (sum,c)=>sum+(Number(c.male_students)||0)+(Number(c.female_students)||0),0);
     },0);
