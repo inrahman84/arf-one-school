@@ -46,7 +46,18 @@ export const StudentsView:React.FC<Props>=({schools,classes,students,movements,o
    s.source_rombel.toLowerCase().includes(filterText.toLowerCase()));
  const handleFile=async(file?:File)=>{
    if(!file)return;setError('');setNotice('');setPreview(null);setMapping({});setConfirmSchool(false);
-   try{const parsed=await readDapodikRoster(file);setPreview(parsed)}
+   try{
+     const parsed=await readDapodikRoster(file);
+     const suggestions:Record<string,string>={};
+     // Auto-suggest only unambiguous exact normalized names within the selected school/period.
+     const normalize=(name:string)=>name.toUpperCase().replace(/[^A-Z0-9]/g,'');
+     for(const label of parsed.rombelLabels){
+       const matches=currentClasses.filter(cls=>normalize(cls.class_name)===normalize(label));
+       if(matches.length===1)suggestions[label]=matches[0].class_id;
+     }
+     setMapping(suggestions);
+     setPreview(parsed);
+   }
    catch(e){setError(e instanceof Error?e.message:'Gagal membaca Dapodik.')}
  };
  const importData=async()=>{
@@ -65,6 +76,9 @@ export const StudentsView:React.FC<Props>=({schools,classes,students,movements,o
        const matched=currentClasses.find(c=>c.class_id===class_id);
        const now=new Date().toISOString();
        records.push({...r,student_id,school_id:schoolId,class_id:matched?.class_id||'',
+         grade_level:matched?.grade_level||prior?.grade_level||'',
+         class_name:matched?.class_name||prior?.class_name||'',
+         grade_hint:matched?.grade_level||r.grade_hint,
          academic_year:year,semester,snapshot_date:preview.snapshotDate,imported_at:prior?.imported_at||now,updated_at:now});
      }
      await studentsService.importStudents(schoolId,records,setProgress);
