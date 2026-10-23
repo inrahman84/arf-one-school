@@ -37,9 +37,12 @@ import {
   SubmissionReview,
   DashboardFilters,
   Semester,
+  StudentRecord,
+  StudentMovement,
   EDUCATION_LEVELS
 } from '../../types';
 import { useAcademicYears } from '../../hooks/useAcademicYears';
+import { StaffingInsights } from './StaffingInsights';
 import { sortedAcademicYears } from '../../services/academicYearsService';
 
 interface DashboardViewProps {
@@ -47,6 +50,8 @@ interface DashboardViewProps {
   regions: Region[];
   classes: ClassroomEnrollment[];
   staff: Staff[];
+  students: StudentRecord[];
+  studentMovements: StudentMovement[];
   assets: Asset[];
   facilities: Facility[];
   reviews: SubmissionReview[];
@@ -73,6 +78,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   regions,
   classes,
   staff,
+  students,
+  studentMovements,
   assets,
   facilities,
   reviews,
@@ -130,8 +137,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   // Calculated KPI Metrics
   const totalStudents = useMemo(() => {
-    return filteredClasses.reduce((sum, c) => sum + (Number(c.male_students) || 0) + (Number(c.female_students) || 0), 0);
-  }, [filteredClasses]);
+    return filteredSchools.reduce((total,school)=>{
+      const roster=students.filter(x=>x.school_id===school.school_id&&
+        (!filters.academicYear||x.academic_year===filters.academicYear)&&
+        (!filters.semester||x.semester===filters.semester));
+      if(roster.length)return total+roster.length;
+      return total+filteredClasses.filter(c=>c.school_id===school.school_id).reduce(
+        (sum,c)=>sum+(Number(c.male_students)||0)+(Number(c.female_students)||0),0);
+    },0);
+  }, [filteredSchools,filteredClasses,students,filters.academicYear,filters.semester]);
 
   const activeTeachers = useMemo(() => {
     return filteredStaff.filter(s => s.employment_status === 'Aktif' && (s.staff_category === 'Guru' || s.staff_category === 'Kepala Sekolah')).length;
@@ -286,6 +300,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   return (
     <div className="space-y-6 pb-12">
+      {/* Aggregate only: individual identifiers never appear on executive screens. */}
+      <StaffingInsights schools={filteredSchools} classes={filteredClasses} staff={filteredStaff}
+        students={students.filter(x=>activeSchoolIds.has(x.school_id))}
+        academicYear={filters.academicYear||masterActiveYear||''} semester={filters.semester as Semester}/>
       {/* Top Filter Bar */}
       <div className="bg-white p-4 rounded-xl shadow-xs border border-gray-200">
         <div className="flex flex-wrap items-center justify-between gap-4">
