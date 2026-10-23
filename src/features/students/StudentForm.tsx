@@ -1,5 +1,5 @@
 import React,{useEffect,useState} from 'react';
-import {ClassroomEnrollment,Semester,StudentRecord,StudentPrivateDetails,StudentFamilyMember} from '../../types';
+import {ClassroomEnrollment,School,Semester,StudentRecord,StudentPrivateDetails,StudentFamilyMember} from '../../types';
 import {makeStudentId} from '../../lib/dapodikStudents';
 import {studentsService} from '../../services/studentsService';
 import {HomeLocationPicker} from './HomeLocationPicker';
@@ -10,8 +10,8 @@ import {
 
 interface Props{
  schoolId:string;schoolName:string;educationLevel:string;academicYear:string;semester:Semester;
- classes:ClassroomEnrollment[];existing:StudentRecord|null;canManagePrivate:boolean;
- onSaved:()=>Promise<void>|void;onCancel:()=>void;
+ schools:School[];classes:ClassroomEnrollment[];existing:StudentRecord|null;canManagePrivate:boolean;
+ onSaved:(savedSchoolId:string)=>Promise<void>|void;onCancel:()=>void;
 }
 type StringField=Exclude<keyof StudentPrivateDetails,
  'father'|'mother'|'guardian'|'latitude'|'longitude'|'kip_flag'>;
@@ -47,9 +47,12 @@ const FAMILY_LABELS:{key:keyof Pick<StudentPrivateDetails,'father'|'mother'|'gua
 ];
 
 export const StudentForm:React.FC<Props>=({
- schoolId,schoolName,educationLevel,academicYear,semester,classes,existing,canManagePrivate,onSaved,onCancel
+ schoolId,schoolName,educationLevel,academicYear,semester,schools,classes,existing,canManagePrivate,onSaved,onCancel
 })=>{
- const options=classes.filter(c=>c.school_id===schoolId&&c.academic_year===academicYear&&c.semester===semester);
+ const [selectedSchoolId,setSelectedSchoolId]=useState(existing?.school_id||schoolId);
+ const selectedSchool=schools.find(s=>s.school_id===selectedSchoolId);
+ const currentLevel=selectedSchool?.education_level||educationLevel;
+ const options=classes.filter(c=>c.school_id===selectedSchoolId&&c.academic_year===academicYear&&c.semester===semester);
  const [name,setName]=useState(existing?.full_name||'');
  const [gender,setGender]=useState<'L'|'P'>(existing?.gender||'L');
  const [nisn,setNisn]=useState(existing?.nisn||'');
@@ -65,6 +68,7 @@ export const StudentForm:React.FC<Props>=({
  const [consented,setConsented]=useState(false);
  useEffect(()=>{
    let alive=true;
+   setSelectedSchoolId(existing?.school_id||schoolId);
    setName(existing?.full_name||'');setGender(existing?.gender||'L');
    setNisn(existing?.nisn||'');setNipd(existing?.nipd||'');
    setGrade(options.find(c=>c.class_id===existing?.class_id)?.grade_level||existing?.grade_level||'');
@@ -155,7 +159,7 @@ export const StudentForm:React.FC<Props>=({
  };
  const save=async(e:React.FormEvent)=>{
    e.preventDefault();setError('');
-   if(!name.trim()||!schoolId||!academicYear||!grade||!chosen){
+   if(!name.trim()||!selectedSchoolId||!schools.some(s=>s.school_id===selectedSchoolId)||!academicYear||!grade||!chosen){
      setError('Lengkapi Nama, Tingkat Kelas, dan Nama Rombel.');return;
    }
    if(nisn.trim()&&!/^\d{10}$/.test(nisn.trim())){
@@ -166,7 +170,7 @@ export const StudentForm:React.FC<Props>=({
    }
    if(canManagePrivate){
      if(!consented){setError('Konfirmasi kewenangan pengolahan data pribadi sebelum menyimpan.');return}
-     const issue=validateDetails(sanitizeDetails(details),educationLevel);
+     const issue=validateDetails(sanitizeDetails(details),currentLevel);
      if(issue){setError(issue);return;}
    }
    setSubmitting(true);
@@ -176,11 +180,11 @@ export const StudentForm:React.FC<Props>=({
        gender,source_rombel:existing?.source_rombel||chosen.class_name};
      const student_id=pendingId||existing?.student_id||(
        nisn.trim()||nipd.trim() ?
-         (await makeStudentId(schoolId,base))+'-'+academicYear.replace('/','-')+'-'+semester :
+         (await makeStudentId(selectedSchoolId,base))+'-'+academicYear.replace('/','-')+'-'+semester :
          'PD-M-'+crypto.randomUUID()
      );
      await studentsService.saveStudent({
-       ...(existing||{}),...base,student_id,school_id:schoolId,class_id:chosen.class_id,
+       ...(existing||{}),...base,student_id,school_id:selectedSchoolId,class_id:chosen.class_id,
        grade_level:chosen.grade_level,grade_hint:chosen.grade_level,class_name:chosen.class_name,
        academic_year:academicYear,semester,
        snapshot_date:existing?.snapshot_date||now.slice(0,10),
@@ -189,10 +193,10 @@ export const StudentForm:React.FC<Props>=({
      setPendingId(student_id);
      if(canManagePrivate){
        await studentsService.savePrivateDetails(sanitizeDetails({
-         ...details,student_id,school_id:schoolId,updated_at:now
+         ...details,student_id,school_id:selectedSchoolId,updated_at:now
        }));
      }
-     await onSaved();
+     await onSaved(selectedSchoolId);
    }catch(err){setError(err instanceof Error?err.message:'Penyimpanan gagal. Cek data lalu ulangi.')}
    finally{setSubmitting(false)}
  };
@@ -203,7 +207,7 @@ export const StudentForm:React.FC<Props>=({
  const bankUnlocked=details.kip_recipient==='Ya'&&details.pip_received==='Ya';
  return <section className="rounded-xl border border-[#c89b55] bg-white p-4 sm:p-5 space-y-4">
   <div><h3 className="text-base font-bold text-[#073b2d]">{existing?'Edit Data Peserta Didik':'Tambah Peserta Didik Baru'}</h3>
-   <p className="text-xs text-gray-600 mt-1">Sekolah: {schoolName} · Jenjang: {educationLevel} · Tahun Ajaran {academicYear} · Semester {semester}</p>
+   <p className="text-xs text-gray-600 mt-1">{selectedSchool?.school_name||schoolName} · Jenjang: {currentLevel} · Tahun Ajaran {academicYear} · Semester {semester}</p>
   </div>
   {error&&<div className="rounded-lg bg-rose-50 border border-rose-200 p-3 text-xs text-rose-800" role="alert">{error}</div>}
   {!options.length&&<p className="rounded-lg bg-amber-50 p-3 text-xs text-amber-900">
@@ -212,6 +216,20 @@ export const StudentForm:React.FC<Props>=({
   {detailsLoading&&<p role="status" className="text-xs text-gray-600">Memuat data pribadi dengan hak akses khusus...</p>}
   <form onSubmit={e=>void save(e)} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
     {section('Identitas dan Penempatan Peserta Didik',<>
+      <label className="sm:col-span-2 text-xs font-semibold">Sekolah *
+       <select required className={input+' mt-1'} value={selectedSchoolId}
+         disabled={Boolean(existing)}
+         onChange={e=>{
+           setSelectedSchoolId(e.target.value);setGrade('');setClassId('');
+           setDetails(prev=>({...prev,school_id:e.target.value}));
+         }}>
+         <option value="">Pilih sekolah dari Daftar Sekolah</option>
+         {schools.map(s=><option key={s.school_id} value={s.school_id}>{s.school_name}</option>)}
+       </select>
+       {existing&&<span className="mt-1 block text-[11px] text-gray-500">
+         Perubahan sekolah untuk siswa terdaftar memerlukan proses mutasi sekolah.
+       </span>}
+      </label>
       <label className="sm:col-span-2 text-xs font-semibold">Nama Peserta Didik *
        <input required className={input+' mt-1'} maxLength={150} value={name} onChange={e=>setName(e.target.value)}/>
       </label>
@@ -282,7 +300,7 @@ export const StudentForm:React.FC<Props>=({
      </>)}
      {section('Kebutuhan Khusus dan Kesehatan',<>
        {select('special_needs','Kebutuhan Khusus',SPECIAL_NEEDS)}
-       {healthFields.filter(f=>f.key!=='head_circumference_cm'||supportsHeadCircumference(educationLevel)).map(f=>field(f))}
+       {healthFields.filter(f=>f.key!=='head_circumference_cm'||supportsHeadCircumference(currentLevel)).map(f=>field(f))}
      </>)}
      {section('Titik Koordinat Rumah Peserta Didik',<>
        <div className="sm:col-span-2">
