@@ -6,6 +6,7 @@ import {useAcademicYears} from '../../hooks/useAcademicYears';
 import {DapodikPreview,makeStudentId,normalizeSchoolLabel,readDapodikRoster,rosterCounts} from '../../lib/dapodikStudents';
 import {studentsService} from '../../services/studentsService';
 import {currentRoster} from '../../lib/studentActivity';
+import {StudentForm} from './StudentForm';
 
 interface Props{
  schools:School[];classes:ClassroomEnrollment[];students:StudentRecord[];
@@ -23,6 +24,8 @@ export const StudentsView:React.FC<Props>=({schools,classes,students,movements,o
  const [error,setError]=useState('');
  const [notice,setNotice]=useState('');
  const [busy,setBusy]=useState(false);
+ const [showStudentForm,setShowStudentForm]=useState(false);
+ const [editingStudent,setEditingStudent]=useState<StudentRecord|null>(null);
  const [progress,setProgress]=useState(0);
  const [filterText,setFilterText]=useState('');
  const [eventStudent,setEventStudent]=useState('');
@@ -101,11 +104,11 @@ export const StudentsView:React.FC<Props>=({schools,classes,students,movements,o
      <p className="text-sm text-gray-600">Sumber Daya — Register peserta didik Dapodik, pemetaan rombel dan mutasi terverifikasi.</p></div>
    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-xl border bg-white p-4">
      <label className="text-xs font-semibold">Sekolah<select className={input+' mt-1'} value={schoolId}
-       onChange={e=>{setSchoolId(e.target.value);setPreview(null);setMapping({});}}>
+       onChange={e=>{setSchoolId(e.target.value);setPreview(null);setMapping({});setShowStudentForm(false);setEditingStudent(null);}}>
        {visibleSchools.map(s=><option key={s.school_id} value={s.school_id}>{s.school_name}</option>)}</select></label>
      <label className="text-xs font-semibold">Tahun Ajaran Aktif<input className={input+' mt-1 bg-gray-50'} readOnly value={year||'Belum diaktifkan'}/></label>
      <label className="text-xs font-semibold">Semester<select className={input+' mt-1'} value={semester}
-       onChange={e=>{setSemester(e.target.value as Semester);setPreview(null);}}>
+       onChange={e=>{setSemester(e.target.value as Semester);setPreview(null);setShowStudentForm(false);setEditingStudent(null);}}>
        <option value="Ganjil">Ganjil</option><option value="Genap">Genap</option></select></label>
    </div>
    {error&&<div role="alert" className="rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-sm p-3">{error}</div>}
@@ -114,6 +117,26 @@ export const StudentsView:React.FC<Props>=({schools,classes,students,movements,o
     {[['Peserta didik',summaries.total],['Laki-laki',summaries.male],['Perempuan',summaries.female],['Belum dipetakan',unassigned]].map(([label,count])=>
      <div key={label} className="rounded-xl border bg-white p-4"><div className="text-xs text-gray-500">{label}</div><div className="font-bold text-2xl text-[#073b2d]">{count}</div></div>)}
    </div>
+   <div className="flex flex-wrap items-center justify-between gap-2">
+     <div className="text-sm text-gray-600">Kelola peserta didik satu per satu melalui formulir atau impor massal menggunakan Dapodik.</div>
+     <button type="button" disabled={!schoolId||!year||busy}
+       onClick={()=>{setEditingStudent(null);setShowStudentForm(true);setError('');}}
+       className="rounded-lg bg-[#073b2d] px-4 py-2.5 text-xs font-semibold text-white disabled:opacity-50">
+       + Tambah Peserta Didik
+     </button>
+   </div>
+   {showStudentForm && <StudentForm
+      key={editingStudent?.student_id||'student-new'}
+      schoolId={schoolId}
+      schoolName={selectedSchool?.school_name||''}
+      academicYear={year}
+      semester={semester}
+      classes={currentClasses}
+      existing={editingStudent}
+      onCancel={()=>{setShowStudentForm(false);setEditingStudent(null);}}
+      onSaved={async()=>{await onRefresh();setShowStudentForm(false);setEditingStudent(null);
+        setNotice('Data peserta didik tersimpan. Jumlah murid pada Rombel & Peserta Didik diperbarui otomatis.');}}
+   />}
    <section className="rounded-xl border bg-white p-4 space-y-3">
      <h3 className="font-bold flex items-center gap-2"><Upload size={16}/> Impor Daftar Peserta Didik (Dapodik)</h3>
      <p className="text-xs text-gray-600">Hanya data minimum yang diimpor. File asli, NIK, alamat, data orang tua, bantuan, rekening dan kesehatan tidak disimpan. Semua impor dikaitkan ke sekolah, tahun ajaran dan semester.</p>
@@ -151,10 +174,18 @@ export const StudentsView:React.FC<Props>=({schools,classes,students,movements,o
      </div>)}
      <input className={input} placeholder="Cari peserta didik atau rombel" value={filterText} onChange={e=>setFilterText(e.target.value)}/>
      <div className="overflow-x-auto"><table className="w-full text-xs min-w-[520px]">
-       <thead><tr className="text-left border-b bg-gray-50"><th className="p-2">Nama</th><th className="p-2">JK</th><th className="p-2">Rombel Sumber</th><th className="p-2">Rombel Terpetakan</th></tr></thead>
+       <thead><tr className="text-left border-b bg-gray-50"><th className="p-2">Nama</th><th className="p-2">JK</th><th className="p-2">Rombel Sumber</th><th className="p-2">Rombel Terpetakan</th><th className="p-2">Aksi</th></tr></thead>
        <tbody>{displayed.slice(0,80).map(s=><tr key={s.student_id} className="border-b">
          <td className="p-2">{s.full_name}</td><td className="p-2">{s.gender}</td><td className="p-2">{s.source_rombel||'—'}</td>
-         <td className="p-2">{currentClasses.find(c=>c.class_id===s.class_id)?.class_name||'Belum dipetakan'}</td></tr>)}</tbody></table></div>
+         <td className="p-2">{currentClasses.find(c=>c.class_id===s.class_id)?.class_name||'Belum dipetakan'}</td>
+         <td className="p-2">
+           <button type="button" onClick={()=>{setEditingStudent(s);setShowStudentForm(true);
+             setError('');setNotice('');}}
+             className="rounded-lg border border-[#073b2d] px-2.5 py-1 text-xs text-[#073b2d]">
+             Edit
+           </button>
+         </td>
+       </tr>)}</tbody></table></div>
      <p className="text-[11px] text-gray-500">Ditampilkan maksimal 80 nama pada layar. Data pribadi peserta didik tidak diteruskan ke Executive Dashboard.</p>
    </section>
    <section className="rounded-xl border bg-white p-4 space-y-3">
