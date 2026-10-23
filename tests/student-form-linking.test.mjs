@@ -46,7 +46,8 @@ test('rombel counts come from saved class_id and refresh; protected classes cann
  assert.match(enrollment,/rosterCounts\(roster,cls\.class_id,cls\.academic_year,cls\.semester\)/);
  assert.match(enrollment,/const male = calcCounts\(cls\)\.male/);
  assert.match(enrollment,/const female = calcCounts\(cls\)\.female/);
- assert.match(enrollment,/readOnly=\{draftCounts\.active\}/);
+ assert.match(enrollment,/const draftCounts=calcCounts/);
+ assert.doesNotMatch(enrollment.slice(enrollment.indexOf('{/* Modal Add / Edit Class */}')),/>Siswa Laki-laki \*<\/label>/);
  assert.match(service,/linked=assigned\.docs\.filter\(d=>d\.data\(\)\.class_id===classId\)/);
  assert.match(service,/peserta didik terhubung/);
 });
