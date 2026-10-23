@@ -14,7 +14,7 @@ test('manual student form exposes grade and class from the same school year seme
  assert.match(ui,/grade_level:chosen\.grade_level/);
  assert.match(ui,/class_name:chosen\.class_name/);
  assert.match(ui,/studentsService\.saveStudent/);
- assert.match(ui,/Boolean\(existing\)/);
+ assert.match(ui,/Boolean\(existing\|\|pendingId\)/);
 });
 
 test('Sumber Daya data siswa has add/edit form and reflects the master class',()=>{
