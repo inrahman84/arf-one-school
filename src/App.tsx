@@ -190,6 +190,10 @@ const MainAppContent: React.FC = () => {
       title: 'Data Rombongan Belajar & Siswa',
       subtitle: 'Pengelolaan kapasitas kelas dan pemantauan rasio murid'
     },
+    students: {
+      title: 'Data Peserta Didik (Dapodik)',
+      subtitle: 'Register murid, pemetaan rombel, dan mutasi berbasis bukti'
+    },
     hr: {
       title: 'Guru & Tenaga Kependidikan (PTK)',
       subtitle: 'Data kualifikasi, sertifikasi pendidik, dan beban mengajar mingguan'
