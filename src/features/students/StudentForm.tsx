@@ -23,14 +23,14 @@ export const StudentForm:React.FC<Props>=({
  const [gender,setGender]=useState<'L'|'P'>(existing?.gender||'L');
  const [nisn,setNisn]=useState(existing?.nisn||'');
  const [nipd,setNipd]=useState(existing?.nipd||'');
- const [grade,setGrade]=useState(existing?.grade_level||options.find(c=>c.class_id===existing?.class_id)?.grade_level||'');
+ const [grade,setGrade]=useState(options.find(c=>c.class_id===existing?.class_id)?.grade_level||existing?.grade_level||'');
  const [classId,setClassId]=useState(existing?.class_id||'');
  const [submitting,setSubmitting]=useState(false);
  const [error,setError]=useState('');
  useEffect(()=>{
    setName(existing?.full_name||'');setGender(existing?.gender||'L');
    setNisn(existing?.nisn||'');setNipd(existing?.nipd||'');
-   setGrade(existing?.grade_level||options.find(c=>c.class_id===existing?.class_id)?.grade_level||'');
+   setGrade(options.find(c=>c.class_id===existing?.class_id)?.grade_level||existing?.grade_level||'');
    setClassId(existing?.class_id||'');setError('');
  },[existing?.student_id,schoolId,academicYear,semester]);
  const levels=[...new Set(options.map(c=>c.grade_level))].sort((a,b)=>
