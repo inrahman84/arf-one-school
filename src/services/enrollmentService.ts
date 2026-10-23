@@ -58,9 +58,15 @@ export const enrollmentService = {
   async deleteClass(schoolId: string, classId: string): Promise<void> {
     const path = `schools/${schoolId}/classes/${classId}`;
     try {
+      const assigned=await getDocs(collection(db,'schools',schoolId,'students'));
+      const linked=assigned.docs.filter(d=>d.data().class_id===classId);
+      if(linked.length>0){
+        throw new Error('Rombel masih memiliki '+linked.length+' peserta didik terhubung. Pindahkan murid ke rombel lain sebelum menghapus.');
+      }
       await deleteDoc(doc(db, 'schools', schoolId, 'classes', classId));
       await auditService.log('DELETE_CLASS', 'ClassroomEnrollment', classId, schoolId, `Menghapus rombel ${classId}`);
     } catch (error) {
+      if(error instanceof Error&&error.message.includes('peserta didik terhubung'))throw error;
       handleSupabaseError(error, OperationType.DELETE, path);
     }
   },
