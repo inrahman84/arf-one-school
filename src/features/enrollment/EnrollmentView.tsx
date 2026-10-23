@@ -10,7 +10,7 @@ import {
   Settings2,
   RefreshCw
 } from 'lucide-react';
-import { ClassroomEnrollment, School, Semester, StudentRecord, StudentMovement } from '../../types';
+import { ClassroomEnrollment, School, Staff, Semester, StudentRecord, StudentMovement } from '../../types';
 import { movementCounts } from '../../services/studentsService';
 import { rosterCounts } from '../../lib/dapodikStudents';
 import { currentRoster } from '../../lib/studentActivity';
@@ -22,6 +22,7 @@ import { ConfirmModal } from '../../components/ui/ConfirmModal';
 
 interface EnrollmentViewProps {
   schools: School[];
+  staff: Staff[];
   classes: ClassroomEnrollment[];
   students: StudentRecord[];
   studentMovements: StudentMovement[];
@@ -32,6 +33,7 @@ interface EnrollmentViewProps {
 
 export const EnrollmentView: React.FC<EnrollmentViewProps> = ({
   schools,
+  staff,
   classes,
   students,
   studentMovements,
@@ -90,10 +92,14 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({
     transfer_in: 0,
     transfer_out: 0,
     dropout_students: 0,
-    homeroom_name: ''
+    homeroom_name: '',
+    homeroom_staff_id: ''
   });
 
   const accessibleSchools = schools.filter(s => hasSchoolAccess(s.school_id));
+  const activeTeachers=staff.filter(person=>person.school_id===formData.school_id &&
+    person.staff_category==='Guru' && person.employment_status==='Aktif')
+    .sort((a,b)=>a.staff_name.localeCompare(b.staff_name,'id'));
   const calcCounts=(cls:ClassroomEnrollment)=>{
     const imported=students.filter(x=>x.school_id===cls.school_id&&x.academic_year===cls.academic_year&&x.semester===cls.semester);
     const roster=currentRoster(imported,studentMovements);
@@ -199,7 +205,8 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({
       transfer_in: 0,
       transfer_out: 0,
       dropout_students: 0,
-      homeroom_name: ''
+      homeroom_name: '',
+      homeroom_staff_id: ''
     });
     setModalOpen(true);
   };
@@ -220,7 +227,8 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({
       transfer_in: cls.transfer_in || 0,
       transfer_out: cls.transfer_out || 0,
       dropout_students: cls.dropout_students || 0,
-      homeroom_name: cls.homeroom_name || ''
+      homeroom_name: cls.homeroom_name || '',
+      homeroom_staff_id: cls.homeroom_staff_id || ''
     });
     setModalOpen(true);
   };
@@ -259,6 +267,14 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({
       return;
     }
 
+    if(editingClass && formData.school_id!==editingClass.school_id){
+      setFormError('Sekolah rombel yang telah terdaftar tidak boleh diganti melalui Edit.');return;
+    }
+    const selectedTeacher=formData.homeroom_staff_id ?
+      activeTeachers.find(person=>person.staff_id===formData.homeroom_staff_id):undefined;
+    if(formData.homeroom_staff_id&&!selectedTeacher){
+      setFormError('Wali Kelas harus guru aktif dari sekolah yang dipilih.');return;
+    }
     if (!editingClass && (!masterConnected || !masterActiveYear || formData.academic_year !== masterActiveYear)) {
       setFormError('Aktifkan Tahun Ajaran pada Administrasi Sistem → Master Tahun Ajaran sebelum menambahkan rombel.');
       return;
@@ -267,6 +283,8 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({
     try {
       await enrollmentService.saveClass({
         ...formData,
+        homeroom_staff_id:selectedTeacher?.staff_id||'',
+        homeroom_name:selectedTeacher?.staff_name||'',
         male_students: draftCounts.male,
         female_students: draftCounts.female,
         class_capacity: Number(formData.class_capacity) || 0,
@@ -590,7 +608,8 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Sekolah *</label>
                   <select
                     value={formData.school_id}
-                    onChange={(e) => setFormData({ ...formData, school_id: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, school_id: e.target.value, homeroom_staff_id: '', homeroom_name: '' })}
+                    disabled={Boolean(editingClass)}
                     className="w-full text-xs p-2 rounded-lg border border-gray-300"
                     required
                   >
@@ -638,77 +657,21 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({
 
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Wali Kelas</label>
-                  <input
-                    type="text"
-                    value={formData.homeroom_name}
-                    onChange={(e) => setFormData({ ...formData, homeroom_name: e.target.value })}
-                    placeholder="Nama Wali Kelas"
-                    className="w-full text-xs p-2 rounded-lg border border-gray-300"
-                  />
+                  <select
+                    value={formData.homeroom_staff_id}
+                    onChange={e=>setFormData({...formData,homeroom_staff_id:e.target.value})}
+                    className="w-full rounded-lg border border-gray-300 bg-white p-2 text-xs">
+                    <option value="">— Belum ditetapkan —</option>
+                    {formData.homeroom_staff_id && !activeTeachers.some(person=>person.staff_id===formData.homeroom_staff_id) &&
+                      <option value={formData.homeroom_staff_id} disabled>Guru sebelumnya tidak aktif / tidak terdaftar — pilih ulang</option>}
+                    {activeTeachers.map(person=><option key={person.staff_id} value={person.staff_id}>
+                      {person.staff_name}
+                    </option>)}
+                  </select>
+                  {activeTeachers.length===0&&<p className="mt-1 text-[11px] text-amber-800">
+                    Belum ada guru aktif di sekolah ini. Tambahkan melalui Guru &amp; Tenaga Kependidikan.
+                  </p>}
                 </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Siswa Laki-laki *</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={draftCounts.male}
-                    readOnly={draftCounts.active}
-                    onChange={(e) => setFormData({ ...formData, male_students: Number(e.target.value) })}
-                    className="w-full text-xs p-2 rounded-lg border border-gray-300"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Siswa Perempuan *</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={draftCounts.female}
-                    readOnly={draftCounts.active}
-                    onChange={(e) => setFormData({ ...formData, female_students: Number(e.target.value) })}
-                    className="w-full text-xs p-2 rounded-lg border border-gray-300"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Siswa Pindahan Masuk</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={draftCounts.incoming}
-                    readOnly={draftCounts.active}
-                    onChange={(e) => setFormData({ ...formData, transfer_in: Number(e.target.value) })}
-                    className="w-full text-xs p-2 rounded-lg border border-gray-300"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Siswa Keluar / DO</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={draftCounts.active ? draftCounts.outgoing + draftCounts.dropout : draftCounts.dropout}
-                    readOnly={draftCounts.active}
-                    onChange={(e) => setFormData({ ...formData, dropout_students: Number(e.target.value) })}
-                    className="w-full text-xs p-2 rounded-lg border border-gray-300"
-                  />
-                </div>
-              </div>
-
-              <p className={`rounded-lg border p-3 text-xs ${draftCounts.active?'border-emerald-200 bg-emerald-50 text-emerald-800':'border-amber-200 bg-amber-50 text-amber-800'}`}>
-                {draftCounts.active
-                  ? 'Otomatis dari register peserta didik dan log mutasi. Periksa murid yang belum dipetakan pada Sumber Daya → Data Peserta Didik.'
-                  : 'Belum ada register peserta didik untuk periode ini. Nilai masih berasal dari pengisian rombel sebelumnya.'}
-              </p>
-              {/* Total preview */}
-              <div className="p-3 bg-gray-50 rounded-lg text-xs flex items-center justify-between">
-                <span>Total Murid yang Dihitung:</span>
-                <strong className="text-gray-900 text-sm">
-                  {draftCounts.male + draftCounts.female} Siswa
-                </strong>
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-200">
