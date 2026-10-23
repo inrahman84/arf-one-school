@@ -46,3 +46,14 @@ test('executive teacher planning prioritizes mapped real rosters with source qua
  assert.match(math,/staff_category==='Guru'/);
  assert.match(math,/source:hasRoster\?'DAPODIK'/);
 });
+
+test('verified exits after snapshot change active headcount but older or same-day events do not',()=>{
+ const activity=src('src/lib/studentActivity.ts');
+ const summary=src('src/features/enrollment/EnrollmentView.tsx');
+ assert.match(activity,/event\.event_date>old\.event_date/);
+ assert.match(activity,/last\.event_date<=s\.snapshot_date/);
+ assert.match(activity,/last\.event_type==='TRANSFER_IN'/);
+ assert.match(summary,/currentRoster\(imported,studentMovements\)/);
+ assert.match(summary,/const active=imported\.length>0/);
+ assert.match(summary,/schoolsWithRoster/);
+});
