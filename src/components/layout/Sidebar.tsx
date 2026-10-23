@@ -24,6 +24,7 @@ export type NavItemKey =
   | 'schools'
   | 'enrollment'
   | 'hr'
+  | 'students'
   | 'assets'
   | 'facilities'
   | 'import'
@@ -89,6 +90,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       title: 'SUMBER DAYA',
       items: [
+        {
+          key: 'students' as NavItemKey,
+          label: 'Data Peserta Didik',
+          icon: Users,
+          visible: isFoundationManager || ['REGIONAL_LEAD', 'SCHOOL_PRINCIPAL', 'SCHOOL_OPERATOR'].includes(effectiveRole)
+        },
         {
           key: 'hr' as NavItemKey,
           label: 'Guru & Tenaga Kependidikan',
