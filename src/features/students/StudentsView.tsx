@@ -1,5 +1,6 @@
 import React, {useEffect,useMemo,useState} from 'react';
-import {Upload,Users,Link2,ArrowRightLeft,RefreshCw} from 'lucide-react';
+import {Upload,Users,Link2,ArrowRightLeft,RefreshCw,X,FileSpreadsheet,Trash2} from 'lucide-react';
+import {ConfirmModal} from '../../components/ui/ConfirmModal';
 import {School,ClassroomEnrollment,StudentRecord,StudentMovement,Semester} from '../../types';
 import {useAuth} from '../../context/AuthContext';
 import {useAcademicYears} from '../../hooks/useAcademicYears';
@@ -27,6 +28,10 @@ export const StudentsView:React.FC<Props>=({schools,classes,students,movements,i
  const [busy,setBusy]=useState(false);
  const [showStudentForm,setShowStudentForm]=useState(false);
  const [editingStudent,setEditingStudent]=useState<StudentRecord|null>(null);
+ const [studentToArchive,setStudentToArchive]=useState<StudentRecord|null>(null);
+ const [archiveBusy,setArchiveBusy]=useState(false);
+ const [archiveError,setArchiveError]=useState<string|null>(null);
+ const [selectedImportName,setSelectedImportName]=useState('');
  const [progress,setProgress]=useState(0);
  const [filterText,setFilterText]=useState('');
  const [eventStudent,setEventStudent]=useState('');
@@ -36,6 +41,28 @@ export const StudentsView:React.FC<Props>=({schools,classes,students,movements,i
  const [eventClass,setEventClass]=useState('');
  useEffect(()=>{if(!schoolId&&visibleSchools[0])setSchoolId(visibleSchools[0].school_id)},[visibleSchools,schoolId]);
  const selectedSchool=visibleSchools.find(s=>s.school_id===schoolId);
+ const closeStudentForm=()=>{
+   setShowStudentForm(false);setEditingStudent(null);
+ };
+ useEffect(()=>{
+   if(!showStudentForm)return;
+   const onEscape=(event:KeyboardEvent)=>{if(event.key==='Escape')closeStudentForm()};
+   document.addEventListener('keydown',onEscape);
+   const previous=document.body.style.overflow;
+   document.body.style.overflow='hidden';
+   return ()=>{document.removeEventListener('keydown',onEscape);document.body.style.overflow=previous};
+ },[showStudentForm]);
+ const confirmArchive=async()=>{
+   if(!studentToArchive || !canManagePrivate)return;
+   setArchiveBusy(true);setArchiveError(null);
+   try{
+     await studentsService.archiveStudent(studentToArchive.school_id,studentToArchive.student_id);
+     setNotice('Data peserta didik diarsipkan. Riwayat mutasi dan data pribadi tetap tersimpan sesuai kebijakan retensi.');
+     setStudentToArchive(null);
+     await onRefresh();
+   }catch(err){setArchiveError(err instanceof Error?err.message:'Gagal mengarsipkan peserta didik.');}
+   finally{setArchiveBusy(false)}
+ };
  const year=activeAcademicYear||'';
  const sourceMatches=preview&&selectedSchool?normalizeSchoolLabel(preview.schoolLabel)===normalizeSchoolLabel(selectedSchool.school_name):false;
  const currentClasses=classes.filter(c=>c.school_id===schoolId&&c.academic_year===year&&c.semester===semester);
@@ -46,7 +73,7 @@ export const StudentsView:React.FC<Props>=({schools,classes,students,movements,i
  const displayed=subset.filter(s=>s.full_name.toLowerCase().includes(filterText.toLowerCase())||
    s.source_rombel.toLowerCase().includes(filterText.toLowerCase()));
  const handleFile=async(file?:File)=>{
-   if(!file)return;setError('');setNotice('');setPreview(null);setMapping({});setConfirmSchool(false);
+   if(!file)return;setSelectedImportName(file.name);setError('');setNotice('');setPreview(null);setMapping({});setConfirmSchool(false);
    try{
      const parsed=await readDapodikRoster(file);
      const suggestions:Record<string,string>={};
@@ -140,20 +167,43 @@ export const StudentsView:React.FC<Props>=({schools,classes,students,movements,i
        + Tambah Peserta Didik
      </button>
    </div>
-   {showStudentForm && <StudentForm
-      key={editingStudent?.student_id||'student-new'}
-      schoolId={schoolId}
-      schoolName={selectedSchool?.school_name||''}
-      educationLevel={selectedSchool?.education_level||''}
-      canManagePrivate={canManagePrivate}
-      academicYear={year}
-      semester={semester}
-      classes={currentClasses}
-      existing={editingStudent}
-      onCancel={()=>{setShowStudentForm(false);setEditingStudent(null);}}
-      onSaved={async()=>{await onRefresh();setShowStudentForm(false);setEditingStudent(null);
-        setNotice('Data peserta didik tersimpan. Jumlah murid pada Rombel & Peserta Didik diperbarui otomatis.');}}
-   />}
+   {showStudentForm && (
+     <div role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)closeStudentForm()}}
+       className="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 p-2 sm:p-5">
+       <div role="dialog" aria-modal="true" aria-label={editingStudent?'Edit Data Peserta Didik':'Tambah Peserta Didik Baru'}
+         className="flex max-h-[94dvh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+         <div className="flex items-center justify-between gap-3 border-b px-4 py-3 sm:px-6">
+           <div><h3 className="text-sm font-bold text-[#073b2d]">
+             {editingStudent?'Edit Data Peserta Didik':'Tambah Peserta Didik Baru'}
+           </h3>
+           <p className="text-xs text-gray-500">Formulir administrasi peserta didik ARF</p></div>
+           <button type="button" title="Tutup formulir" aria-label="Tutup formulir"
+             onClick={closeStudentForm} className="rounded-lg border border-gray-200 p-2 hover:bg-gray-100">
+             <X className="h-5 w-5"/>
+           </button>
+         </div>
+         <div className="min-h-0 flex-1 overflow-y-auto p-2 sm:p-5">
+           <StudentForm key={editingStudent?.student_id||'student-new'}
+             schoolId={editingStudent?.school_id||schoolId}
+             schoolName={selectedSchool?.school_name||''}
+             educationLevel={selectedSchool?.education_level||''}
+             schools={visibleSchools}
+             canManagePrivate={canManagePrivate}
+             academicYear={year}
+             semester={semester}
+             classes={classes}
+             existing={editingStudent}
+             onCancel={closeStudentForm}
+             onSaved={async(savedSchoolId)=>{
+               await onRefresh();closeStudentForm();
+               setSchoolId(savedSchoolId);
+               setNotice('Data peserta didik tersimpan. Jumlah murid pada Rombel & Peserta Didik diperbarui otomatis.');
+             }}
+           />
+         </div>
+       </div>
+     </div>
+   )}
    <section className="rounded-xl border bg-white p-4 space-y-3">
      <h3 className="font-bold flex items-center gap-2"><Users size={16}/> Daftar dan Pemetaan Rombel</h3>
      <p className="text-xs text-gray-600">Pemetaan bisa diterapkan secara massal berdasarkan label Rombel Saat Ini dari Dapodik.</p>
@@ -173,11 +223,19 @@ export const StudentsView:React.FC<Props>=({schools,classes,students,movements,i
          <td className="p-2">{s.full_name}</td><td className="p-2">{s.gender}</td><td className="p-2">{s.source_rombel||'—'}</td>
          <td className="p-2">{currentClasses.find(c=>c.class_id===s.class_id)?.class_name||'Belum dipetakan'}</td>
          <td className="p-2">
-           <button type="button" onClick={()=>{setEditingStudent(s);setShowStudentForm(true);
-             setError('');setNotice('');}}
-             className="rounded-lg border border-[#073b2d] px-2.5 py-1 text-xs text-[#073b2d]">
-             Edit
-           </button>
+           <div className="flex items-center gap-2">
+             <button type="button" onClick={()=>{setEditingStudent(s);setShowStudentForm(true);
+               setError('');setNotice('');}}
+               className="rounded-lg border border-[#073b2d] px-2.5 py-1 text-xs text-[#073b2d]">
+               Edit
+             </button>
+             {canManagePrivate && <button type="button"
+               onClick={()=>{setStudentToArchive(s);setArchiveError(null)}}
+               title="Hapus dari daftar aktif (arsip)"
+               className="inline-flex items-center gap-1 rounded-lg border border-rose-200 px-2.5 py-1 text-xs text-rose-700 hover:bg-rose-50">
+               <Trash2 size={12}/> Hapus
+             </button>}
+           </div>
          </td>
        </tr>)}</tbody></table></div>
      <p className="text-[11px] text-gray-500">Ditampilkan maksimal 80 nama pada layar. Data pribadi peserta didik tidak diteruskan ke Executive Dashboard.</p>
@@ -198,12 +256,33 @@ export const StudentsView:React.FC<Props>=({schools,classes,students,movements,i
      </form>
      <div className="text-xs text-gray-700">Mutasi tercatat periode ini: {movementsHere.filter(x=>x.event_type==='TRANSFER_IN').length} masuk · {movementsHere.filter(x=>x.event_type==='TRANSFER_OUT').length} pindah keluar · {movementsHere.filter(x=>x.event_type==='DROPOUT').length} DO</div>
    </section>
+   <ConfirmModal
+     isOpen={Boolean(studentToArchive)}
+     title="Hapus Peserta Didik dari Daftar Aktif"
+     itemName={studentToArchive?.full_name}
+     message="Peserta didik akan diarsipkan dan tidak lagi dihitung dalam jumlah murid aktif. Data pribadi serta riwayat mutasi tidak dihapus permanen demi keterlacakan."
+     confirmLabel="Arsipkan Peserta Didik"
+     cancelLabel="Batal"
+     loading={archiveBusy}
+     error={archiveError}
+     onCancel={()=>{if(!archiveBusy){setStudentToArchive(null);setArchiveError(null)}}}
+     onConfirm={()=>void confirmArchive()}
+   />
    <section className="rounded-xl border bg-white p-4 space-y-3">
      <h3 className="font-bold flex items-center gap-2"><Upload size={16}/> Impor Daftar Peserta Didik (Dapodik)</h3>
      <p className="text-xs text-gray-600">Impor massal tetap mengambil data minimum: nama, NISN/NIPD, jenis kelamin dan rombel. Kolom NIK, KK, alamat, data orang tua, rekening dan kesehatan dari Excel tidak otomatis masuk ke formulir pribadi. Semua impor dikaitkan ke sekolah, tahun ajaran dan semester.</p>
      {!year&&<p className="text-xs font-semibold text-amber-700">Super Admin perlu mengaktifkan Tahun Ajaran pada Administrasi Sistem.</p>}
-     <input type="file" accept=".xlsx,.xls" disabled={busy||!year||!schoolId}
-       aria-label="Pilih file Dapodik" onChange={e=>void handleFile(e.target.files?.[0])} className="text-xs max-w-full"/>
+     <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+       <input id="student-dapodik-file" type="file" accept=".xlsx,.xls"
+         disabled={busy||!year||!schoolId} aria-label="Pilih file Excel Dapodik"
+         className="sr-only"
+         onChange={e=>void handleFile(e.target.files?.[0])}/>
+       <label htmlFor="student-dapodik-file"
+         className={`inline-flex w-fit items-center gap-2 rounded-lg border-2 border-[#073b2d] bg-[#073b2d] px-4 py-3 text-xs font-bold text-white shadow-sm transition hover:bg-[#0a5742] focus-within:ring-2 focus-within:ring-[#c89b55] ${busy||!year||!schoolId?'cursor-not-allowed opacity-50':'cursor-pointer'}`}>
+         <FileSpreadsheet className="h-4 w-4"/> Pilih File Excel Dapodik (.xlsx/.xls)
+       </label>
+       <span className="break-all text-xs text-gray-600">{selectedImportName||'Belum ada file dipilih'}</span>
+     </div>
      {preview&&<div className="space-y-3 rounded-lg border bg-[#f6f3ec] p-3">
        <p className="text-sm"><strong>{preview.rows.length}</strong> baris valid · {preview.rombelLabels.length} label rombel · {preview.duplicate} duplikat · {preview.rejected} baris invalid · snapshot {preview.snapshotDate}</p>
        <p className="text-xs">Sumber: {preview.schoolLabel||'Tidak terbaca'} · Sekolah tujuan: {selectedSchool?.school_name||'—'}</p>
