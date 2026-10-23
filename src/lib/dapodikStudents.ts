@@ -56,8 +56,8 @@ export async function readDapodikRoster(file:File):Promise<DapodikPreview>{
 }
 
 /** Never place names, NISN, NIPD or uploaded spreadsheets into GitHub or client logs. */
-export async function makeStudentId(schoolId:string,row:Pick<StudentRecord,'full_name'|'nisn'|'nipd'|'gender'>):Promise<string>{
-  const unique=row.nisn?'NISN:'+row.nisn:row.nipd?'NIPD:'+row.nipd:'NAME:'+row.full_name.trim().toUpperCase()+':'+row.gender;
+export async function makeStudentId(schoolId:string,row:Pick<StudentRecord,'full_name'|'nisn'|'nipd'|'gender'|'source_rombel'>):Promise<string>{
+  const unique=row.nisn?'NISN:'+row.nisn:row.nipd?'NIPD:'+row.nipd:'NAME:'+row.full_name.trim().toUpperCase()+':'+row.gender+':'+row.source_rombel.trim().toUpperCase();
   const bytes=new TextEncoder().encode(schoolId+'|'+unique);
   const hash=await crypto.subtle.digest('SHA-256',bytes);
   return 'PD-'+Array.from(new Uint8Array(hash)).slice(0,16).map(x=>x.toString(16).padStart(2,'0')).join('');
