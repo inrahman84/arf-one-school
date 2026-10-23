@@ -279,10 +279,17 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({
   };
 
   // Metrics
-  const totalStudents = filteredClasses.reduce(
-    (sum, c) => sum + calcCounts(c).male + calcCounts(c).female,
-    0
-  );
+  // For schools with a Dapodik roster, count all individuals exactly once,
+  // including students not yet mapped to a class. Other schools retain manual totals.
+  const relevantStudents=students.filter(st=>hasSchoolAccess(st.school_id)&&
+    (selectedSchoolId==='ALL'||st.school_id===selectedSchoolId)&&
+    (!activeAcademicYear||st.academic_year===activeAcademicYear)&&st.semester===semester);
+  const schoolsWithRoster=new Set(relevantStudents.map(st=>st.school_id));
+  const totalStudents=relevantStudents.length+filteredClasses
+    .filter(c=>!schoolsWithRoster.has(c.school_id))
+    .reduce((sum,c)=>sum+(Number(c.male_students)||0)+(Number(c.female_students)||0),0);
+  const unmappedStudents=relevantStudents.filter(st=>!st.class_id||
+    !filteredClasses.some(c=>c.class_id===st.class_id)).length;
   const totalCapacity = filteredClasses.reduce((sum, c) => sum + (Number(c.class_capacity) || 0), 0);
   const overcapacityCount = filteredClasses.filter(c => {
     const total = calcCounts(c).male + calcCounts(c).female;
@@ -291,6 +298,10 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({
 
   return (
     <div className="space-y-6">
+      {unmappedStudents>0 && <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+        {unmappedStudents} peserta didik Dapodik belum dipetakan ke rombel yang sesuai pada filter ini.
+        Total sekolah tetap menghitung mereka, tetapi angka rombel dan estimasi kebutuhan guru perlu diverifikasi.
+      </div>}
       {!masterLoading && masterConnected && !masterActiveYear && (
         <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">
           Belum ada Tahun Ajaran aktif untuk pengisian data baru. Super Admin perlu memilih <strong>Aktifkan</strong> pada menu Administrasi Sistem → Master Tahun Ajaran.
