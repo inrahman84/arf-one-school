@@ -26,3 +26,20 @@ Sumber contoh: **Daftar Peserta Didik — SD Swasta Mitra Mendawai Sejati**, tan
 - Akses dikendalikan oleh kebijakan RLS pada `public.arf_school_documents`, dengan register baru `schools/{school_id}/students` dan `schools/{school_id}/studentMovements`.
 - Perbedaan snapshot dengan data aktif tidak otomatis menjadi mutasi keluar. Catat peristiwa berdasarkan dokumen agar tidak membuat data mutasi fiktif.
 - Pengujian lapangan tetap perlu dilakukan dengan akun sekolah dan dokumen nyata sebelum pengambilan keputusan.
+
+## Pembaruan Integrasi Formulir Manual Peserta Didik — 23 Oktober 2026
+
+**Sumber Daya → Data Peserta Didik** kini memiliki tombol **Tambah Peserta Didik** dan aksi **Edit** pada daftar individual, selain fitur impor Dapodik. Isian inti: nama murid, jenis kelamin, NISN dan NIPD (opsional), **Tingkat Kelas**, dan **Nama Rombel**.
+
+- Tingkat Kelas adalah daftar tingkat yang tersedia dalam **Master Rombel sekolah, tahun ajaran, dan semester yang sedang dipilih**.
+- Nama Rombel merupakan daftar rombel pada tingkat kelas tersebut; memilih tingkat lain mengosongkan pilihan rombel agar tidak salah menghubungkan.
+- Saat Simpan, data terkait menggunakan **class_id** rombel yang sama dengan menu **Manajemen Sekolah → Rombel & Peserta Didik**; informasi grade_level dan class_name turut dicatat untuk kemudahan tampilan, tetapi acuan utamanya tetap class_id.
+- Jumlah laki-laki/perempuan dihitung ulang oleh tampilan rombel dari data murid yang sudah dipetakan, tanpa harus mengedit angka secara manual. Jika murid pindah kelas melalui Edit, jumlah pada rombel asal dan tujuan langsung mencerminkan pemetaan terbaru setelah penyegaran data.
+- Menu Rombel menyediakan tombol **Kelola Data Peserta Didik** yang membuka daftar individual pada sekolah yang sesuai.
+- Bila belum terdapat rombel yang sesuai, operator harus membuat Master Rombel terlebih dahulu; formulir peserta didik tidak membuat rombel fiktif.
+- Impor Dapodik memberikan saran pemetaan **hanya jika nama rombel sama secara normalisasi dan ditemukan satu padanan**, untuk mencegah salah penempatan. Operator tetap dapat memperbaiki pemetaan.
+- NISN/NIPD ganda untuk periode sama dicegah dalam validasi penyimpanan. Pengubahan NISN yang telah tersimpan tidak dilakukan melalui edit biasa.
+- Master Rombel yang sudah dipakai peserta didik tidak dapat dihapus sebelum peserta didik dipindahkan ke rombel lain.
+- Akses sekolah dan register tetap mengikuti RLS Supabase yang ada. Tidak ada perubahan atau reset database yang diperlukan.
+
+**Catatan batasan:** setelah memperbarui form, operator harus menyimpan data dan melakukan pengecekan di Rombel. Sinkronisasi dilakukan saat refresh data oleh aplikasi, bukan websocket/realtime; penerbitan data mutasi masuk/keluar tetap memerlukan peristiwa berlandaskan referensi dokumen, bukan dihasilkan dari perubahan nama kelas.
