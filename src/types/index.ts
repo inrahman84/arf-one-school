@@ -131,6 +131,70 @@ export interface StudentRecord {
   imported_at: string;
   updated_at: string;
 }
+export interface StudentFamilyMember {
+  name: string;
+  birth_year: string;
+  education: string;
+  occupation: string;
+  occupation_other: string;
+  income: string;
+  nik: string;
+}
+/** Confidential child/family data: stored ONLY under schools/{id}/studentPrivate.
+ * Never merge into StudentRecord, analytics, Excel export or audit payload. */
+export interface StudentPrivateDetails {
+  student_id: string;
+  school_id: string;
+  birth_place: string;
+  birth_date: string;
+  nik: string;
+  religion: string;
+  address: string;
+  rt: string;
+  rw: string;
+  hamlet: string;
+  urban_village: string;
+  district: string;
+  postal_code: string;
+  living_arrangement: string;
+  transport: string;
+  phone: string;
+  mobile: string;
+  email: string;
+  skhun: string;
+  kps_recipient: 'Ya'|'Tidak';
+  kps_number: string;
+  father: StudentFamilyMember;
+  mother: StudentFamilyMember;
+  guardian: StudentFamilyMember;
+  national_exam_number: string;
+  diploma_serial: string;
+  kip_recipient: 'Ya'|'Tidak';
+  kip_flag: 0|1;
+  kip_number: string;
+  kip_name: string;
+  kks_number: string;
+  birth_certificate_number: string;
+  pip_received: 'Ya'|'Tidak';
+  pip_eligible: 'Ya'|'Tidak';
+  pip_reason: string;
+  special_needs: string;
+  previous_school: string;
+  birth_order: string;
+  family_card_number: string;
+  bank: string;
+  bank_account: string;
+  bank_account_name: string;
+  latitude: number|null;
+  longitude: number|null;
+  weight_kg: string;
+  height_cm: string;
+  head_circumference_cm: string;
+  siblings_count: string;
+  distance_km: string;
+  updated_at: string;
+}
+
 export type StudentMovementType = 'TRANSFER_IN'|'TRANSFER_OUT'|'DROPOUT';
 export interface StudentMovement {
   event_id: string;
