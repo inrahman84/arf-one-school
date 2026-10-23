@@ -136,18 +136,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     return facilities.filter(f => activeSchoolIds.has(f.school_id));
   }, [facilities, activeSchoolIds]);
 
-  // Calculated KPI Metrics
-  const totalStudents = useMemo(() => {
-    return filteredSchools.reduce((total,school)=>{
+  // One mutually exclusive source per school: Dapodik when imported, otherwise manual classrooms.
+  const schoolStudentCounts=useMemo(()=>{
+    const map=new Map<string,number>();
+    filteredSchools.forEach(school=>{
       const imported=students.filter(x=>x.school_id===school.school_id&&
         (!filters.academicYear||x.academic_year===filters.academicYear)&&
         (!filters.semester||x.semester===filters.semester));
-      const roster=currentRoster(imported,studentMovements);
-      if(imported.length)return total+roster.length;
-      return total+filteredClasses.filter(c=>c.school_id===school.school_id).reduce(
-        (sum,c)=>sum+(Number(c.male_students)||0)+(Number(c.female_students)||0),0);
-    },0);
-  }, [filteredSchools,filteredClasses,students,studentMovements,filters.academicYear,filters.semester]);
+      const current=currentRoster(imported,studentMovements);
+      const count=imported.length?current.length:
+        filteredClasses.filter(c=>c.school_id===school.school_id).reduce((n,c)=>
+          n+(Number(c.male_students)||0)+(Number(c.female_students)||0),0);
+      map.set(school.school_id,count);
+    });
+    return map;
+  },[filteredSchools,students,studentMovements,filteredClasses,filters.academicYear,filters.semester]);
+  const totalStudents=useMemo(()=>Array.from(schoolStudentCounts.values()).reduce((a,b)=>a+b,0),[schoolStudentCounts]);
 
   const activeTeachers = useMemo(() => {
     return filteredStaff.filter(s => s.employment_status === 'Aktif' && (s.staff_category === 'Guru' || s.staff_category === 'Kepala Sekolah')).length;
@@ -206,27 +210,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       }
     });
 
-    filteredClasses.forEach(c => {
-      const sch = schools.find(s => s.school_id === c.school_id);
-      if (sch && regMap[sch.regional_id]) {
-        regMap[sch.regional_id].totalStudents += (Number(c.male_students) || 0) + (Number(c.female_students) || 0);
-      }
+    filteredSchools.forEach(school=>{
+      if(regMap[school.regional_id])regMap[school.regional_id].totalStudents+=schoolStudentCounts.get(school.school_id)||0;
     });
 
     return Object.values(regMap).filter(r => r.schoolCount > 0 || r.totalStudents > 0);
-  }, [regions, filteredSchools, filteredClasses, schools]);
+  }, [regions, filteredSchools, schoolStudentCounts]);
 
   // 2. Student Enrollment by Education Level
   const studentsByLevelData = useMemo(() => {
     const map: Record<string, number> = { 'TPA': 0, 'KB': 0, 'TK': 0, 'SD': 0, 'SMP': 0, 'SMA': 0, 'SMK': 0, 'PAUD': 0 };
-    filteredClasses.forEach(c => {
-      const sch = schools.find(s => s.school_id === c.school_id);
-      if (sch && map[sch.education_level] !== undefined) {
-        map[sch.education_level] += (Number(c.male_students) || 0) + (Number(c.female_students) || 0);
-      }
+    filteredSchools.forEach(school=>{
+      if(map[school.education_level]!==undefined)map[school.education_level]+=schoolStudentCounts.get(school.school_id)||0;
     });
     return Object.entries(map).map(([name, value]) => ({ name, value })).filter(item => item.value > 0);
-  }, [filteredClasses, schools]);
+  }, [filteredSchools, schoolStudentCounts]);
 
   // 3. Teacher Qualification & Certification
   const teacherCertData = useMemo(() => {
