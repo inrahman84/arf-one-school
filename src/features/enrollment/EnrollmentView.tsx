@@ -90,6 +90,18 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({
   });
 
   const accessibleSchools = schools.filter(s => hasSchoolAccess(s.school_id));
+  const calcCounts=(cls:ClassroomEnrollment)=>{
+    const roster=students.filter(x=>x.school_id===cls.school_id&&x.academic_year===cls.academic_year&&x.semester===cls.semester);
+    const active=roster.length>0;
+    const people=rosterCounts(roster,cls.class_id,cls.academic_year,cls.semester);
+    const move=movementCounts(studentMovements,cls.class_id,cls.academic_year,cls.semester);
+    return {male:active?people.male:cls.male_students,
+      female:active?people.female:cls.female_students,
+      incoming:active?move.transferIn:(cls.transfer_in||0),
+      outgoing:active?move.transferOut:(cls.transfer_out||0),
+      dropout:active?move.dropout:(cls.dropout_students||0),active};
+  };
+  const draftCounts=calcCounts(formData as ClassroomEnrollment);
   const yearClassRecords = classes.filter(c => hasSchoolAccess(c.school_id));
   const academicYearOptions = sortedAcademicYears([
     ...savedAcademicYears,
