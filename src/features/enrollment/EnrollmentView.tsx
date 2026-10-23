@@ -9,7 +9,9 @@ import {
   Settings2,
   RefreshCw
 } from 'lucide-react';
-import { ClassroomEnrollment, School, Semester } from '../../types';
+import { ClassroomEnrollment, School, Semester, StudentRecord, StudentMovement } from '../../types';
+import { movementCounts } from '../../services/studentsService';
+import { rosterCounts } from '../../lib/dapodikStudents';
 import { enrollmentService } from '../../services/enrollmentService';
 import { academicYearsService, normalizeAcademicYear, sortedAcademicYears } from '../../services/academicYearsService';
 import { useAcademicYears } from '../../hooks/useAcademicYears';
@@ -19,6 +21,8 @@ import { ConfirmModal } from '../../components/ui/ConfirmModal';
 interface EnrollmentViewProps {
   schools: School[];
   classes: ClassroomEnrollment[];
+  students: StudentRecord[];
+  studentMovements: StudentMovement[];
   onRefresh: () => void;
   onManageAcademicYears: () => void;
 }
@@ -26,6 +30,8 @@ interface EnrollmentViewProps {
 export const EnrollmentView: React.FC<EnrollmentViewProps> = ({
   schools,
   classes,
+  students,
+  studentMovements,
   onRefresh,
   onManageAcademicYears
 }) => {
