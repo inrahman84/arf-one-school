@@ -304,7 +304,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     <div className="space-y-6 pb-12">
       {/* Aggregate only: individual identifiers never appear on executive screens. */}
       <StaffingInsights schools={filteredSchools} classes={filteredClasses} staff={filteredStaff}
-        students={currentRoster(students.filter(x=>activeSchoolIds.has(x.school_id)),studentMovements)}
+        students={students.filter(x=>activeSchoolIds.has(x.school_id))}
+        movements={studentMovements.filter(x=>activeSchoolIds.has(x.school_id))}
         academicYear={filters.academicYear||masterActiveYear||''} semester={filters.semester as Semester}/>
       {/* Top Filter Bar */}
       <div className="bg-white p-4 rounded-xl shadow-xs border border-gray-200">
