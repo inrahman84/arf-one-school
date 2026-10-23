@@ -5,6 +5,7 @@ import {useAuth} from '../../context/AuthContext';
 import {useAcademicYears} from '../../hooks/useAcademicYears';
 import {DapodikPreview,makeStudentId,normalizeSchoolLabel,readDapodikRoster,rosterCounts} from '../../lib/dapodikStudents';
 import {studentsService} from '../../services/studentsService';
+import {currentRoster} from '../../lib/studentActivity';
 
 interface Props{
  schools:School[];classes:ClassroomEnrollment[];students:StudentRecord[];
@@ -35,8 +36,9 @@ export const StudentsView:React.FC<Props>=({schools,classes,students,movements,o
  const sourceMatches=preview&&selectedSchool?normalizeSchoolLabel(preview.schoolLabel)===normalizeSchoolLabel(selectedSchool.school_name):false;
  const currentClasses=classes.filter(c=>c.school_id===schoolId&&c.academic_year===year&&c.semester===semester);
  const subset=students.filter(s=>s.school_id===schoolId&&s.academic_year===year&&s.semester===semester);
- const summaries=rosterCounts(subset);
- const unassigned=subset.filter(s=>!s.class_id).length;
+ const effectiveRoster=currentRoster(subset,movements);
+ const summaries=rosterCounts(effectiveRoster);
+ const unassigned=effectiveRoster.filter(s=>!s.class_id).length;
  const displayed=subset.filter(s=>s.full_name.toLowerCase().includes(filterText.toLowerCase())||
    s.source_rombel.toLowerCase().includes(filterText.toLowerCase()));
  const handleFile=async(file?:File)=>{
