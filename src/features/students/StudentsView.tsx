@@ -200,7 +200,7 @@ export const StudentsView:React.FC<Props>=({schools,classes,students,movements,i
    </section>
    <section className="rounded-xl border bg-white p-4 space-y-3">
      <h3 className="font-bold flex items-center gap-2"><Upload size={16}/> Impor Daftar Peserta Didik (Dapodik)</h3>
-     <p className="text-xs text-gray-600">Impor massal tetap mengambil data minimum: nama, identitas sekolah, jenis kelamin dan rombel. Data sensitif dari dokumen Excel tidak otomatis masuk ke formulir pribadi. Semua impor dikaitkan ke sekolah, tahun ajaran dan semester.</p>
+     <p className="text-xs text-gray-600">Impor massal tetap mengambil data minimum: nama, NISN/NIPD, jenis kelamin dan rombel. Kolom NIK, KK, alamat, data orang tua, rekening dan kesehatan dari Excel tidak otomatis masuk ke formulir pribadi. Semua impor dikaitkan ke sekolah, tahun ajaran dan semester.</p>
      {!year&&<p className="text-xs font-semibold text-amber-700">Super Admin perlu mengaktifkan Tahun Ajaran pada Administrasi Sistem.</p>}
      <input type="file" accept=".xlsx,.xls" disabled={busy||!year||!schoolId}
        aria-label="Pilih file Dapodik" onChange={e=>void handleFile(e.target.files?.[0])} className="text-xs max-w-full"/>
