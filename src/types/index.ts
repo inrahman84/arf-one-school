@@ -114,6 +114,8 @@ export interface ClassroomEnrollment {
 export interface StudentRecord {
   student_id: string;
   school_id: string;
+  /** Soft archive: excluded from active enrollment while historical evidence is retained. */
+  archived_at?: string;
   full_name: string;
   nisn?: string;
   nipd?: string;
