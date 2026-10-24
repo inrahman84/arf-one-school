@@ -66,3 +66,7 @@ Aplikasi production: https://arf-one-school.vercel.app/. Repository GitHub `inra
 ## Rilis Form Inventaris Terbaru (23 Oktober 2026)
 
 Versi sumber yang siap diterbitkan memuat perbaikan formulir inventaris: label School ID, penghilangan teks bantuan yang diminta, nomor polisi TNBK khusus kategori KND Kendaraan, dan penyempurnaan Model/Tipe serta Spesifikasi Singkat. Pengujian build GitHub Actions untuk commit sumber `558db428` telah lulus. Catatan ini memicu ulang integrasi GitHub ke proyek Vercel `arf-one-school` untuk mencoba penerbitan production; status akhir deployment wajib diperiksa dari status Vercel, karena batas frekuensi deployment dapat menolak permintaan.
+
+## Percobaan Deployment ARF One School — 24 Oktober 2026
+
+Integrasi GitHub → Vercel `arf-one-school` dipicu ulang untuk menerbitkan perbaikan formulir peserta didik, pemetaan rombel, serta pemilihan guru aktif pada Rombel. Kode fitur tetap dari commit `24b25c81`, yang telah lulus pengujian GitHub Actions. Keberhasilan penerbitan diverifikasi terpisah melalui deployment status Vercel; pemicu ini bukan bukti deployment berhasil.
