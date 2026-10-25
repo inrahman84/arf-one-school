@@ -64,9 +64,43 @@ export const authService = {
     const {data,error}=await supabase.from('arf_school_members').select('*').eq('user_id',uid).maybeSingle();
     if(error)throw error;return data?toProfile(data as Member):null;
   },
+  /** Supabase Edge Function verifies live Auth JWT and ARF Super Admin membership.
+   * No service-role key, password log, or Auth Admin API is exposed in the browser. */
+  async adminAction(body:Record<string,unknown>):Promise<{ok:boolean;message?:string;createdAuth?:boolean}>{
+    const {data,error}=await supabase.functions.invoke('arf-manage-users',{body});
+    if(error){
+      let message=error.message||'Layanan administrasi pengguna gagal.';
+      const context=(error as {context?:Response}).context;
+      if(context?.json){
+        try{const detail=await context.json() as {error?:string};if(detail.error)message=detail.error;}
+        catch{/* Non-JSON gateway response */}
+      }
+      throw new Error(message);
+    }
+    if(!data?.ok)throw new Error(String(data?.error||'Perubahan pengguna belum berhasil.'));
+    return data as {ok:boolean;message?:string;createdAuth?:boolean};
+  },
+  async createAuthorizedUser(input:{
+    displayName:string;email:string;position:string;role:UserRole;
+    assignedSchools:string[];assignedRegions:string[];password:string
+  }){
+    return this.adminAction({action:'create',...input});
+  },
+  async updateAuthorizedUser(uid:string,input:{
+    displayName:string;position:string;role:UserRole;status:UserStatus;
+    assignedSchools:string[];assignedRegions:string[]
+  }){
+    return this.adminAction({action:'update',userId:uid,...input});
+  },
+  async createOrResetPassword(uid:string,password:string){
+    return this.adminAction({action:'setPassword',userId:uid,password});
+  },
+  async removeAuthorizedUser(uid:string){
+    return this.adminAction({action:'remove',userId:uid});
+  },
   async getAllUsers():Promise<UserProfile[]>{
     const {data,error}=await supabase.from('arf_school_members').select('*').order('created_at',{ascending:false});
-    if(error)throw error;return (data||[]).map(x=>toProfile(x as Member));
+    if(error)throw error;return (data||[]).filter(x=>!x.deleted_at).map(x=>toProfile(x as Member));
   },
   async updateUserRoleAndScope(uid:string,role:UserRole,assignedSchools:string[],assignedRegions:string[],position?:string):Promise<void>{
     const {error}=await supabase.from('arf_school_members').update({role,assigned_schools:assignedSchools,assigned_regions:assignedRegions,
