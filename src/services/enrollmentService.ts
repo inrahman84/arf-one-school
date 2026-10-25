@@ -70,7 +70,7 @@ export const enrollmentService = {
     const path = `schools/${schoolId}/classes/${classId}`;
     try {
       const assigned=await getDocs(collection(db,'schools',schoolId,'students'));
-      const linked=assigned.docs.filter(d=>d.data().class_id===classId);
+      const linked=assigned.docs.filter(d=>!d.data().archived_at && d.data().class_id===classId);
       if(linked.length>0){
         throw new Error('Rombel masih memiliki '+linked.length+' peserta didik terhubung. Pindahkan murid ke rombel lain sebelum menghapus.');
       }
