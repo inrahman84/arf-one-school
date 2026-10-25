@@ -534,6 +534,27 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ schools,
                 </div>
               )}
 
+              {inviteForm.role !== 'SUPER_ADMIN' && inviteForm.role !== 'FOUNDATION_MANAGER' && (
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-gray-700">Regional yang Ditugaskan (Otorisasi Wilayah)</label>
+                  <div className="max-h-28 space-y-1.5 overflow-y-auto rounded-lg border border-gray-200 bg-gray-50 p-3">
+                    {regions.map(region=>(
+                      <label key={region.id} className="flex cursor-pointer items-center gap-2 text-xs text-gray-700">
+                        <input type="checkbox" checked={inviteForm.assignedRegions.includes(region.id)}
+                          onChange={e=>setInviteForm(prev=>({
+                            ...prev,assignedRegions:e.target.checked?
+                              [...new Set([...prev.assignedRegions,region.id])]:
+                              prev.assignedRegions.filter(id=>id!==region.id)
+                          }))}/>
+                        <span>{region.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <p className="mt-1 text-[11px] text-gray-500">
+                    Akses sekolah tetap memerlukan penugasan sekolah yang sesuai. Pilih sekolah dan Regional seperlunya.
+                  </p>
+                </div>
+              )}
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
                 <button
                   type="button"
@@ -672,6 +693,27 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ schools,
                 </div>
               )}
 
+              {editForm.role !== 'SUPER_ADMIN' && editForm.role !== 'FOUNDATION_MANAGER' && (
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-gray-700">Regional yang Ditugaskan (Otorisasi Wilayah)</label>
+                  <div className="max-h-28 space-y-1.5 overflow-y-auto rounded-lg border border-gray-200 bg-gray-50 p-3">
+                    {regions.map(region=>(
+                      <label key={region.id} className="flex cursor-pointer items-center gap-2 text-xs text-gray-700">
+                        <input type="checkbox" checked={editForm.assignedRegions.includes(region.id)}
+                          onChange={e=>setEditForm(prev=>({
+                            ...prev,assignedRegions:e.target.checked?
+                              [...new Set([...prev.assignedRegions,region.id])]:
+                              prev.assignedRegions.filter(id=>id!==region.id)
+                          }))}/>
+                        <span>{region.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <p className="mt-1 text-[11px] text-gray-500">
+                    Akses sekolah tetap memerlukan penugasan sekolah yang sesuai. Pilih sekolah dan Regional seperlunya.
+                  </p>
+                </div>
+              )}
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
                 <button
                   type="button"
