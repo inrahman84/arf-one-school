@@ -116,6 +116,13 @@ export interface StudentRecord {
   school_id: string;
   /** Soft archive: excluded from active enrollment while historical evidence is retained. */
   archived_at?: string;
+  archived_class_id?: string;
+  archived_class_name?: string;
+  archived_grade_level?: string;
+  /** Stable person lineage across semester/year copies; not a replacement for NISN. */
+  lineage_id?: string;
+  copied_from_student_id?: string;
+  copied_from_period?: string;
   full_name: string;
   nisn?: string;
   nipd?: string;
