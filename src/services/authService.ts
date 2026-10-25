@@ -6,7 +6,7 @@ import type { UserProfile, UserInvitation, UserRole, UserStatus } from '../types
 // Google OAuth requires an enabled Supabase provider and an approved Google Cloud OAuth client.
 export const GOOGLE_OAUTH_ENABLED = import.meta.env.VITE_GOOGLE_OAUTH_ENABLED === 'true';
 export const BOOTSTRAP_ADMIN_EMAIL = 'iswahyudhi.r@sumbermassarana.sch.id';
-type Member = {user_id:string;email:string;display_name:string;position:string|null;role:UserRole;assigned_regions:string[];assigned_schools:string[];status:UserStatus;created_at:string;updated_at:string};
+type Member = {user_id:string;email:string;display_name:string;position:string|null;role:UserRole;assigned_regions:string[];assigned_schools:string[];status:UserStatus;deleted_at?:string|null;created_at:string;updated_at:string};
 function toProfile(m:Member):UserProfile {return {uid:m.user_id,email:m.email,displayName:m.display_name,
   position:m.position || '',role:m.role,assignedRegions:m.assigned_regions||[],assignedSchools:m.assigned_schools||[],
   status:m.status,createdAt:m.created_at,updatedAt:m.updated_at};}
@@ -57,7 +57,8 @@ export const authService = {
     const {data,error}=await supabase.from('arf_school_members').select('*').eq('user_id',user.id).maybeSingle();
     if(error)throw error;
     if(!data)throw new Error('Akun belum terdaftar untuk ARF One School. Hubungi Super Admin.');
-    if(data.status!=='ACTIVE')throw new Error('Akun belum diaktifkan oleh Super Admin.');
+    if(data.deleted_at)throw new Error('Akses ARF One School untuk akun ini telah dicabut.');
+    if(data.status!=='ACTIVE')throw new Error('Akun belum aktif. Hubungi Super Admin.');
     return toProfile(data as Member);
   },
   async getUserProfile(uid:string):Promise<UserProfile|null>{
