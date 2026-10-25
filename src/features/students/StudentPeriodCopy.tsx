@@ -61,13 +61,22 @@ export const StudentPeriodCopy:React.FC<Props>=({
  };
  const selected=source.filter(s=>selectedIds.includes(s.student_id));
  const mapped=selected.filter(s=>Boolean(individualTargets[s.student_id]||groupTargets[studentSourceGroup(s)]));
- const validPeriod=isValidPeriodCopy(sourceYear,sourceSemester,activeYear,targetSemester);
+ const validPeriod=years.includes(activeYear)&&
+   isValidPeriodCopy(sourceYear,sourceSemester,activeYear,targetSemester);
  const existingTarget=students.filter(s=>s.school_id===schoolId&&s.academic_year===activeYear&&s.semester===targetSemester);
  const sameTargetIdentity=(student:StudentRecord)=>existingTarget.some(e=>
    (student.nisn&&e.nisn&&student.nisn===e.nisn)||
    (student.nipd&&e.nipd&&student.nipd===e.nipd)||
-   (student.lineage_id&&e.lineage_id&&student.lineage_id===e.lineage_id));
+   (e.lineage_id&&e.lineage_id===(student.lineage_id||student.student_id)));
  const present=selected.filter(s=>sameTargetIdentity(s)).length;
+ const existingActive=currentRoster(existingTarget,movements);
+ const overCapacity=targets.map(target=>{
+   const existingCount=existingActive.filter(s=>s.class_id===target.class_id).length;
+   const incoming=selected.filter(s=>
+     !sameTargetIdentity(s)&&
+     (individualTargets[s.student_id]||groupTargets[studentSourceGroup(s)])===target.class_id).length;
+   return {name:target.class_name,total:existingCount+incoming,capacity:target.class_capacity};
+ }).filter(x=>x.capacity>0&&x.total>x.capacity);
  const handleCopy=async()=>{
    if(busy)return;
    if(!validPeriod){setError('Pilih periode asal yang lebih lama. Untuk tahun yang sama, hanya Ganjil ke Genap.');return}
@@ -118,7 +127,7 @@ export const StudentPeriodCopy:React.FC<Props>=({
      </label>
      <label className="text-xs font-semibold">Semester Asal
        <select className={styles+' mt-1'} value={sourceSemester} disabled={busy} onChange={e=>{
-         setSourceSemester(e.target.value as Semester);setSelectedIds([]);setConfirmed(false)}}>
+         setSourceSemester(e.target.value as Semester);setSelectedIds([]);setGroupTargets({});setIndividualTargets({});setConfirmed(false)}}>
          <option value="Ganjil">Ganjil</option><option value="Genap">Genap</option>
        </select>
      </label>
@@ -199,6 +208,11 @@ export const StudentPeriodCopy:React.FC<Props>=({
        </div>
      </div>
    </>}
+   {overCapacity.length>0&&<p role="status" className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+     <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0"/>
+     Periksa kapasitas rombel tujuan: {overCapacity.map(x=>x.name+' ('+x.total+'/'+x.capacity+')').join(', ')}.
+     Penyalinan tetap memerlukan konfirmasi petugas.
+   </p>}
    {error&&<p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800">{error}</p>}
    {success&&<p role="status" className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800">
      <CheckCircle className="h-4 w-4 shrink-0"/>{success}
