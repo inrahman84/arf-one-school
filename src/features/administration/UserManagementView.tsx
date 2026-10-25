@@ -10,7 +10,11 @@ import {
   Clock,
   School as SchoolIcon,
   MapPin,
-  Lock
+  Lock,
+  KeyRound,
+  Trash2,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { UserProfile, UserInvitation, School, Region, UserRole, UserStatus } from '../../types';
 import { authService, BOOTSTRAP_ADMIN_EMAIL } from '../../services/authService';
@@ -33,6 +37,13 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ schools,
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [createPassword, setCreatePassword] = useState('');
+  const [createPasswordConfirm, setCreatePasswordConfirm] = useState('');
+  const [showCreatePassword, setShowCreatePassword] = useState(false);
+  const [editPassword, setEditPassword] = useState('');
+  const [editPasswordConfirm, setEditPasswordConfirm] = useState('');
+  const [showEditPassword, setShowEditPassword] = useState(false);
+  const [deleting, setDeleting] = useState<string|null>(null);
 
   // Invite Form
   const [inviteForm, setInviteForm] = useState({
@@ -80,37 +91,38 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ schools,
       email: '',
       position: 'Operator Sekolah',
       role: 'SCHOOL_OPERATOR',
-      assignedRegions: regions[0] ? [regions[0].id] : [],
-      assignedSchools: schools[0] ? [schools[0].school_id] : []
+      assignedRegions: [],
+      assignedSchools: []
     });
+    setCreatePassword('');setCreatePasswordConfirm('');setShowCreatePassword(false);
     setInviteModalOpen(true);
   };
 
   const handleInviteSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inviteForm.email || !inviteForm.displayName) {
-      alert('Email dan Nama Lengkap wajib diisi!');
-      return;
+    if(!inviteForm.email.trim() || !inviteForm.displayName.trim()){
+      alert('Email dan nama lengkap wajib diisi.');return;
     }
-
+    if(createPassword.length<12||!/\d/.test(createPassword)||!/[a-zA-Z]/.test(createPassword)){
+      alert('Buat sandi minimal 12 karakter, mengandung huruf dan angka.');return;
+    }
+    if(createPassword!==createPasswordConfirm){
+      alert('Konfirmasi sandi belum sama.');return;
+    }
     setSubmitting(true);
-    try {
-      await authService.inviteUser({
-        ...inviteForm,
-        invitedBy: currentUser?.email || 'Super Admin'
-      });
+    try{
+      const result=await authService.createAuthorizedUser({...inviteForm,password:createPassword});
+      setCreatePassword('');setCreatePasswordConfirm('');
       setInviteModalOpen(false);
-      loadData();
-      alert(`Email ${inviteForm.email} telah ditambahkan ke daftar undangan. Pengguna dapat mendaftar dengan email dan kata sandi pada halaman login ARF One School. Akses akan mengikuti peran serta lingkup sekolah yang telah ditetapkan.`);
-    } catch (err: any) {
-      alert(err.message || 'Gagal membuat undangan');
-    } finally {
-      setSubmitting(false);
-    }
+      await loadData();
+      alert(result.message||'Akun berhasil dibuat dan dapat login menggunakan email serta sandi.');
+    }catch(err:any){alert(err.message||'Gagal membuat akun pengguna');}
+    finally{setSubmitting(false);}
   };
 
   const openEditModal = (user: UserProfile) => {
     setSelectedUser(user);
+    setEditPassword('');setEditPasswordConfirm('');setShowEditPassword(false);
     setEditForm({
       displayName: user.displayName,
       position: user.position || '',
@@ -124,36 +136,56 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ schools,
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedUser) return;
-
-    setSubmitting(true);
-    try {
-      await authService.updateUserRoleAndScope(
-        selectedUser.uid,
-        editForm.role,
-        editForm.assignedSchools,
-        editForm.assignedRegions,
-        editForm.position
-      );
-      if (editForm.status !== selectedUser.status) {
-        await authService.updateUserStatus(selectedUser.uid, editForm.status);
-      }
-      setEditModalOpen(false);
-      loadData();
-    } catch (err: any) {
-      alert(err.message || 'Gagal memperbarui pengguna');
-    } finally {
-      setSubmitting(false);
+    if(!selectedUser)return;
+    if(editPassword&&(editPassword.length<12||!/\d/.test(editPassword)||!/[a-zA-Z]/.test(editPassword))){
+      alert('Buat sandi minimal 12 karakter, mengandung huruf dan angka.');return;
     }
+    if(editPassword!==editPasswordConfirm){
+      alert('Konfirmasi sandi baru belum sama.');return;
+    }
+    setSubmitting(true);
+    try{
+      await authService.updateAuthorizedUser(selectedUser.uid,editForm);
+      if(editPassword){
+        try{await authService.createOrResetPassword(selectedUser.uid,editPassword);}
+        catch(err){
+          alert('Peran/hak akses sudah disimpan, tetapi reset sandi gagal: '+
+            (err instanceof Error?err.message:'periksa layanan Auth'));
+          return;
+        }
+      }
+      setEditPassword('');setEditPasswordConfirm('');
+      setEditModalOpen(false);
+      await loadData();
+      alert('Pengguna dan hak akses berhasil diperbarui.'+
+        (editPassword?' Kata sandi baru telah ditetapkan. Berikan melalui saluran aman.':''));
+    }catch(err:any){alert(err.message||'Gagal memperbarui pengguna');}
+    finally{setSubmitting(false);}
   };
 
-  const handleToggleDeactivate = async (user: UserProfile) => {
-    const isDeactivating = user.status === 'ACTIVE';
-    const actionText = isDeactivating ? 'Nonaktifkan' : (user.status === 'INVITED' ? 'Setujui & Aktifkan' : 'Aktifkan Kembali');
-    if (confirm(`${actionText} akun ${user.email}?`)) {
-      await authService.updateUserStatus(user.uid, isDeactivating ? 'INACTIVE' : 'ACTIVE');
-      loadData();
-    }
+  const handleToggleDeactivate = async(user:UserProfile)=>{
+    if(!isSuperAdmin||user.uid===currentUser?.uid)return;
+    const next=user.status==='ACTIVE'?'INACTIVE':'ACTIVE';
+    if(!confirm((next==='INACTIVE'?'Nonaktifkan':'Aktifkan')+' akses '+user.email+'?'))return;
+    setSubmitting(true);
+    try{
+      await authService.adminAction({action:'setStatus',userId:user.uid,status:next});
+      await loadData();
+    }catch(err:any){alert(err.message||'Gagal mengubah status pengguna');}
+    finally{setSubmitting(false);}
+  };
+
+  const handleRemoveUser=async(user:UserProfile)=>{
+    if(!isSuperAdmin||user.uid===currentUser?.uid)return;
+    if(!confirm('Hapus akses ARF One School untuk '+user.email+
+      '? Pengguna akan hilang dari daftar ARF dan tidak bisa lagi mengakses aplikasi ini. Akun login di aplikasi lain tidak dihapus.'))return;
+    setDeleting(user.uid);
+    try{
+      await authService.removeAuthorizedUser(user.uid);
+      await loadData();
+      alert('Pengguna berhasil dihapus dari keanggotaan ARF One School.');
+    }catch(err:any){alert(err.message||'Gagal menghapus pengguna.');}
+    finally{setDeleting(null);}
   };
 
   const filteredUsers = users.filter(u => {
@@ -243,7 +275,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ schools,
           <table className="w-full text-left text-xs">
             <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 font-bold uppercase tracking-wider">
               <tr>
-                <th className="py-3 px-4">Nama &amp; Email Google</th>
+                <th className="py-3 px-4">Nama &amp; Email Pengguna</th>
                 <th className="py-3 px-4">Jabatan</th>
                 <th className="py-3 px-4">Peran (Role)</th>
                 <th className="py-3 px-4">Sekolah / Wilayah Ditugaskan</th>
@@ -303,6 +335,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ schools,
                       <div className="flex items-center justify-center gap-1.5">
                         <button
                           onClick={() => openEditModal(user)}
+                          disabled={submitting||Boolean(deleting)}
                           className="p-1 rounded hover:bg-gray-100 text-gray-600 hover:text-gray-900"
                           title="Ubah Hak Akses"
                         >
@@ -315,6 +348,14 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ schools,
                             title={user.status === 'ACTIVE' ? 'Nonaktifkan Akun' : user.status === 'INVITED' ? 'Setujui Pendaftaran Pengguna' : 'Aktifkan Akun'}
                           >
                             <UserX className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {!isBootstrap&&user.uid!==currentUser?.uid&&isSuperAdmin&&(
+                          <button type="button" disabled={Boolean(deleting)||submitting}
+                            onClick={()=>void handleRemoveUser(user)}
+                            className="p-1 rounded text-rose-600 hover:bg-rose-50 disabled:opacity-40"
+                            title="Hapus Pengguna dari ARF One School">
+                            <Trash2 className="w-3.5 h-3.5"/>
                           </button>
                         )}
                       </div>
@@ -381,7 +422,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ schools,
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
             <h3 className="text-base font-bold text-gray-900 pb-3 border-b border-gray-200">
-              Tambah Pengguna Baru &amp; Hak Akses
+              Tambah Pengguna Baru &amp; Hak Akses (Buat Akun Login)
             </h3>
 
             <form onSubmit={handleInviteSubmit} className="mt-4 space-y-4">
@@ -398,7 +439,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ schools,
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Email Google Pengguna *</label>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Email Pengguna *</label>
                 <input
                   type="email"
                   value={inviteForm.email}
@@ -407,7 +448,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ schools,
                   className="w-full text-xs p-2.5 rounded-lg border border-gray-300"
                   required
                 />
-                <p className="text-[11px] text-[#5f5d5d] mt-1">Pengguna akan masuk menggunakan Akun Google ini.</p>
+                <p className="text-[11px] text-[#5f5d5d] mt-1">Akun login dibuat menggunakan email dan kata sandi yang Anda tentukan. Berikan sandi hanya melalui saluran aman.</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -441,6 +482,27 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ schools,
                 </div>
               </div>
 
+              <div className="rounded-xl border border-[#c89b55]/50 bg-[#f6f3ec] p-3 space-y-3">
+                <p className="flex items-center gap-2 text-xs font-bold text-[#073b2d]"><KeyRound className="w-4 h-4"/> Buat Sandi Pengguna *</p>
+                <p className="text-[11px] text-gray-600">Sandi minimal 12 karakter (huruf dan angka). Tidak disimpan pada profil ARF dan tidak dikirim otomatis melalui email.</p>
+                <label className="block text-xs font-semibold">Kata Sandi Baru
+                  <div className="mt-1 flex gap-2">
+                    <input type={showCreatePassword?'text':'password'} autoComplete="new-password"
+                      value={createPassword} onChange={e=>setCreatePassword(e.target.value)}
+                      minLength={12} required className="min-w-0 flex-1 rounded-lg border border-gray-300 p-2.5 text-xs"/>
+                    <button type="button" onClick={()=>setShowCreatePassword(v=>!v)}
+                      aria-label={showCreatePassword?'Sembunyikan sandi':'Tampilkan sandi'}
+                      className="rounded-lg border border-gray-300 p-2">
+                      {showCreatePassword?<EyeOff className="w-4 h-4"/>:<Eye className="w-4 h-4"/>}
+                    </button>
+                  </div>
+                </label>
+                <label className="block text-xs font-semibold">Konfirmasi Kata Sandi
+                  <input type="password" autoComplete="new-password" value={createPasswordConfirm}
+                    onChange={e=>setCreatePasswordConfirm(e.target.value)} minLength={12} required
+                    className="mt-1 w-full rounded-lg border border-gray-300 p-2.5 text-xs"/>
+                </label>
+              </div>
               {/* School Assignment Checklist */}
               {inviteForm.role !== 'SUPER_ADMIN' && inviteForm.role !== 'FOUNDATION_MANAGER' && (
                 <div>
@@ -556,6 +618,29 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ schools,
                 </select>
               </div>
 
+              <div className="rounded-xl border border-[#c89b55]/50 bg-[#f6f3ec] p-3 space-y-3">
+                <p className="flex items-center gap-2 text-xs font-bold text-[#073b2d]"><KeyRound className="w-4 h-4"/> Buat / Reset Sandi Pengguna</p>
+                <p className="text-[11px] text-gray-600">
+                  Opsional. Kosongkan untuk mempertahankan sandi sebelumnya. Untuk reset, buat sandi baru minimal 12 karakter (huruf dan angka).
+                  Perubahan sandi pada layanan Supabase Auth berlaku bagi akun email yang sama.
+                </p>
+                <label className="block text-xs font-semibold">Sandi Baru
+                  <div className="mt-1 flex gap-2">
+                    <input type={showEditPassword?'text':'password'} value={editPassword}
+                      onChange={e=>setEditPassword(e.target.value)} autoComplete="new-password"
+                      minLength={12} className="min-w-0 flex-1 rounded-lg border border-gray-300 p-2.5 text-xs"/>
+                    <button type="button" aria-label={showEditPassword?'Sembunyikan sandi':'Tampilkan sandi'}
+                      onClick={()=>setShowEditPassword(v=>!v)} className="rounded-lg border border-gray-300 p-2">
+                      {showEditPassword?<EyeOff className="w-4 h-4"/>:<Eye className="w-4 h-4"/>}
+                    </button>
+                  </div>
+                </label>
+                <label className="block text-xs font-semibold">Konfirmasi Sandi Baru
+                  <input type="password" value={editPasswordConfirm} autoComplete="new-password"
+                    onChange={e=>setEditPasswordConfirm(e.target.value)} minLength={editPassword?12:undefined}
+                    required={Boolean(editPassword)} className="mt-1 w-full rounded-lg border border-gray-300 p-2.5 text-xs"/>
+                </label>
+              </div>
               {/* School Assignment Checklist */}
               {editForm.role !== 'SUPER_ADMIN' && editForm.role !== 'FOUNDATION_MANAGER' && (
                 <div>
