@@ -8,6 +8,7 @@ import {DapodikPreview,makeStudentId,normalizeSchoolLabel,readDapodikRoster,rost
 import {studentsService} from '../../services/studentsService';
 import {currentRoster} from '../../lib/studentActivity';
 import {StudentForm} from './StudentForm';
+import {StudentPeriodCopy} from './StudentPeriodCopy';
 
 interface Props{
  schools:School[];classes:ClassroomEnrollment[];students:StudentRecord[];
@@ -16,7 +17,7 @@ interface Props{
 export const StudentsView:React.FC<Props>=({schools,classes,students,movements,initialSchoolId,onRefresh})=>{
  const {hasSchoolAccess,effectiveRole}=useAuth();
  const canManagePrivate=['SUPER_ADMIN','SCHOOL_PRINCIPAL','SCHOOL_OPERATOR'].includes(effectiveRole);
- const {activeAcademicYear}=useAcademicYears();
+ const {activeAcademicYear,savedAcademicYears}=useAcademicYears();
  const visibleSchools=schools.filter(s=>hasSchoolAccess(s.school_id));
  const [schoolId,setSchoolId]=useState(initialSchoolId||'');
  const [semester,setSemester]=useState<Semester>('Ganjil');
@@ -268,6 +269,10 @@ export const StudentsView:React.FC<Props>=({schools,classes,students,movements,i
      onCancel={()=>{if(!archiveBusy){setStudentToArchive(null);setArchiveError(null)}}}
      onConfirm={()=>void confirmArchive()}
    />
+   <StudentPeriodCopy schoolId={schoolId} activeYear={year}
+     years={savedAcademicYears} classes={classes} students={students}
+     movements={movements} canCopyPrivate={canManagePrivate}
+     onFinished={onRefresh}/>
    <section className="rounded-xl border bg-white p-4 space-y-3">
      <h3 className="font-bold flex items-center gap-2"><Upload size={16}/> Impor Daftar Peserta Didik (Dapodik)</h3>
      <p className="text-xs text-gray-600">Impor massal tetap mengambil data minimum: nama, NISN/NIPD, jenis kelamin dan rombel. Kolom NIK, KK, alamat, data orang tua, rekening dan kesehatan dari Excel tidak otomatis masuk ke formulir pribadi. Semua impor dikaitkan ke sekolah, tahun ajaran dan semester.</p>
