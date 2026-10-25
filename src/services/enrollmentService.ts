@@ -37,6 +37,27 @@ export const enrollmentService = {
   async saveClass(cls: Omit<ClassroomEnrollment, 'created_at' | 'updated_at'> & { created_at?: string }): Promise<void> {
     const path = `schools/${cls.school_id}/classes/${cls.class_id}`;
     try {
+      const previous=await getDoc(doc(db,'schools',cls.school_id,'classes',cls.class_id));
+      if(previous.exists()){
+        const prior=previous.data() as ClassroomEnrollment;
+        if(prior.school_id!==cls.school_id||prior.academic_year!==cls.academic_year||
+           prior.semester!==cls.semester){
+          throw new Error('Sekolah, Tahun Ajaran dan Semester rombel tidak dapat diubah. Buat rombel periode baru.');
+        }
+      }else{
+        const {academicYearsService}=await import('./academicYearsService');
+        const master=await academicYearsService.loadAcademicYears();
+        if(!master.connected||!master.years.includes(cls.academic_year)){
+          throw new Error('Tahun Ajaran wajib terdaftar pada Master sebelum membuat rombel baru.');
+        }
+        const existing=await getDocs(collection(db,'schools',cls.school_id,'classes'));
+        if(existing.docs.some(d=>{
+          const c=d.data() as ClassroomEnrollment;
+          return c.academic_year===cls.academic_year&&c.semester===cls.semester&&
+           c.grade_level.trim().toLowerCase()===cls.grade_level.trim().toLowerCase()&&
+           c.class_name.trim().toLowerCase()===cls.class_name.trim().toLowerCase();
+        }))throw new Error('Rombel dengan nama dan tingkat sama telah terdaftar pada periode tujuan.');
+      }
       if(cls.homeroom_staff_id){
         const staffSnap=await getDoc(doc(db,'schools',cls.school_id,'staff',cls.homeroom_staff_id));
         const person=staffSnap.exists()?staffSnap.data():null;
@@ -61,7 +82,7 @@ export const enrollmentService = {
       await setDoc(doc(db, 'schools', cls.school_id, 'classes', cls.class_id), payload, { merge: true });
       await auditService.log('SAVE_CLASS', 'ClassroomEnrollment', cls.class_id, cls.school_id, `Rombel: ${cls.class_name} (${cls.academic_year} ${cls.semester})`);
     } catch (error) {
-      if(error instanceof Error && error.message.includes('Wali Kelas harus'))throw error;
+      if(error instanceof Error && /Wali Kelas harus|Tahun Ajaran|periode tujuan|tidak dapat diubah/.test(error.message))throw error;
       handleSupabaseError(error, OperationType.WRITE, path);
     }
   },
