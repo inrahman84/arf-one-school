@@ -122,6 +122,7 @@ Deno.serve(async(req:Request)=>{
    const {data:target,error:targetError}=await membership(userId);
    if(targetError||!target||target.deleted_at)throw failure('Pengguna ARF tidak ditemukan.',404);
    const isSelf=userId===user.id;
+   const isBootstrap=target.email?.toLowerCase()==='iswahyudhi.r@sumbermassarana.sch.id';
    const lastAdmin=target.role==='SUPER_ADMIN'&&await activeAdminCount()<=1;
    if(action==='update'){
      const role=str(body.role,40),status=str(body.status,20);
@@ -134,6 +135,8 @@ Deno.serve(async(req:Request)=>{
        throw failure('Data pengguna tidak lengkap/valid.');
      if(isSelf&&(role!=='SUPER_ADMIN'||status!=='ACTIVE'))
        throw failure('Super Admin tidak boleh menurunkan peran atau menonaktifkan akun sendiri.');
+     if(isBootstrap&&(role!=='SUPER_ADMIN'||status!=='ACTIVE'))
+       throw failure('Peran dan status akun bootstrap Super Admin dilindungi.');
      if(lastAdmin&&(role!=='SUPER_ADMIN'||status!=='ACTIVE'))
        throw failure('Super Admin aktif terakhir tidak boleh dinonaktifkan.');
      const {error}=await admin.from('arf_school_members').update({
@@ -149,6 +152,7 @@ Deno.serve(async(req:Request)=>{
      const status=str(body.status,20);
      if(!allowedStatuses.has(status))throw failure('Status tidak valid.');
      if(isSelf&&status!=='ACTIVE')throw failure('Tidak dapat menonaktifkan diri sendiri.');
+     if(isBootstrap&&status!=='ACTIVE')throw failure('Akun bootstrap Super Admin dilindungi.');
      if(lastAdmin&&status!=='ACTIVE')throw failure('Super Admin terakhir wajib aktif.');
      const {error}=await admin.from('arf_school_members').update({
        status,updated_at:new Date().toISOString()
@@ -165,6 +169,7 @@ Deno.serve(async(req:Request)=>{
      return response({ok:true,message:'Sandi baru disimpan. Berikan kepada pengguna melalui saluran yang aman.'},200,origin);
    }
    if(action==='remove'){
+     if(isBootstrap)throw failure('Akun bootstrap Super Admin tidak dapat dihapus.');
      if(isSelf)throw failure('Tidak dapat menghapus akses ARF milik sendiri.');
      if(lastAdmin)throw failure('Super Admin aktif terakhir tidak dapat dihapus.');
      const {error}=await admin.from('arf_school_members').update({
