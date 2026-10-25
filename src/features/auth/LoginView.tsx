@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Sparkles, AlertCircle, Mail, UserRoundPlus, ArrowLeft, Info } from 'lucide-react';
+import { Sparkles, AlertCircle, Mail, UserRoundPlus, ArrowLeft, Info } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { GOOGLE_OAUTH_ENABLED } from '../../services/authService';
 
@@ -35,8 +35,8 @@ export const LoginView: React.FC = () => {
       }else if(mode==='register'){
         const result=await registerWithEmail(manualEmail,password,fullName);
         setNotice(result.confirmationRequired
-          ? 'Pendaftaran diterima. Silakan periksa kotak masuk email untuk verifikasi. Setelah itu, akses ke data sekolah memerlukan persetujuan Super Admin.'
-          : 'Akun terdaftar. Akses data sekolah tetap menunggu persetujuan Super Admin.');
+          ? 'Pendaftaran diterima. Verifikasi email Anda terlebih dahulu. Peran awal adalah Operator Sekolah. Hubungi Super Admin untuk penugasan sekolah.'
+          : 'Akun berhasil didaftarkan sebagai Operator Sekolah. Hubungi Super Admin untuk penugasan sekolah.');
         setPassword('');setConfirmPassword('');
       }else{
         await loginWithEmail(manualEmail);
@@ -79,7 +79,7 @@ export const LoginView: React.FC = () => {
               {mode==='register'?'Daftar Email Pengguna':mode==='email-link'?'Masuk dengan Tautan Email':'Masuk ke ARF One School'}
             </h2>
             <p className="text-xs text-[#5f5d5d]">
-              {mode==='register'?'Daftarkan identitas Anda. Akses data memerlukan persetujuan administrator.'
+              {mode==='register'?'Daftar dengan email dan kata sandi. Peran awal: Operator Sekolah.'
                :mode==='email-link'?'Kirim tautan verifikasi ke akun email yang sudah terdaftar.'
                :'Portal manajemen dan pemantauan mutu sekolah ARF.'}
             </p>
@@ -136,15 +136,7 @@ export const LoginView: React.FC = () => {
               Google OAuth belum dikonfigurasi oleh administrator. Gunakan email dan kata sandi terlebih dahulu.
             </p>}
           </div>
-          <div className="p-3.5 rounded-xl bg-gray-50 border border-gray-200/80 space-y-1.5 text-[11px] text-[#5f5d5d]">
-            <div className="font-semibold text-gray-800 flex items-center gap-1.5">
-              <ShieldCheck className="w-3.5 h-3.5 text-[#3f6276]"/>
-              <span>Persetujuan Pengguna oleh Super Admin</span>
-            </div>
-            <p className="leading-relaxed">
-              Pendaftaran email tidak otomatis memberikan akses ke data sekolah. Super Admin menetapkan peran, wilayah, serta sekolah yang boleh diakses.
-            </p>
-          </div>
+
         </div>
         <div className="px-8 py-3 bg-gray-50 border-t border-gray-100 text-center text-[11px] text-gray-400">
           ARF One School &copy; 2026 Abdul Rasyid Foundation
