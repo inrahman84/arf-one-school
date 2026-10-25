@@ -12,6 +12,7 @@ export function currentRoster(roster:StudentRecord[],events:StudentMovement[]):S
      (event.event_date===old.event_date && event.created_at>old.created_at))latestByPerson.set(key,event);
  }
  return roster.filter(s=>{
+   if(s.archived_at)return false;
    const key=[s.school_id,s.student_id,s.academic_year,s.semester].join('|');
    const last=latestByPerson.get(key);
    if(!last || last.event_date<=s.snapshot_date)return true;
