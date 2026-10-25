@@ -110,7 +110,15 @@ export const studentsService={
    const record=current.data() as StudentRecord;
    if(record.school_id!==schoolId)throw new Error('Peserta didik tidak berasal dari sekolah ini.');
    if(record.archived_at)throw new Error('Peserta didik sudah berada di arsip.');
-   await updateDoc(ref,{archived_at:new Date().toISOString(),updated_at:new Date().toISOString()});
+   // Break the live class relation while keeping a historical reference for audits.
+   await updateDoc(ref,{
+     archived_at:new Date().toISOString(),
+     archived_class_id:record.class_id||'',
+     archived_class_name:record.class_name||'',
+     archived_grade_level:record.grade_level||'',
+     class_id:'',class_name:'',grade_level:'',
+     updated_at:new Date().toISOString()
+   });
    void auditService.log('ARCHIVE_STUDENT','StudentRecord',studentId,schoolId,
      'Data peserta didik diarsipkan tanpa menghapus bukti dan riwayat').catch(()=>{});
  },
