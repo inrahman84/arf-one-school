@@ -36,8 +36,12 @@ test('Only one central year can be active and cannot be deleted',()=>{
   assert.match(ui,/Tahun Ajaran Aktif/);
 });
 
-test('Activated year governs new classrooms, dashboard, reports, and imports',()=>{
-  assert.match(src('src/features/enrollment/EnrollmentView.tsx'),/academic_year: masterActiveYear \|\| ''/);
+test('Master year is default for new classroom, while registered historical periods remain selectable',()=>{
+  const classes=src('src/features/enrollment/EnrollmentView.tsx');
+  assert.match(classes,/savedAcademicYears\.includes\(activeAcademicYear\)/);
+  assert.match(classes,/formData\.academic_year/);
+  assert.match(classes,/>Semester \*<\/label>/);
+  assert.match(classes,/savedAcademicYears\.includes\(formData\.academic_year\)/);
   assert.match(src('src/features/dashboard/DashboardView.tsx'),/masterActiveYear/);
   assert.match(src('src/features/reports/ReportsView.tsx'),/masterActiveYear/);
   assert.match(src('src/features/imports/DataImportView.tsx'),/current\.activeYear/);
