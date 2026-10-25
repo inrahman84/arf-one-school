@@ -10,12 +10,13 @@ test('OAuth stays disabled until explicitly enabled by a deployment flag',()=>{
   assert.match(auth,/if\(!GOOGLE_OAUTH_ENABLED\)/);
   assert.match(login,/disabled=\{!GOOGLE_OAUTH_ENABLED\|\|busyNow\}/);
 });
-test('email registration uses Supabase Auth and requires admin membership approval',()=>{
+test('email registration uses Supabase Auth and defaults to school operator awaiting scope assignment',()=>{
   const auth=read('src/services/authService.ts');
   const login=read('src/features/auth/LoginView.tsx');
   assert.match(auth,/supabase\.auth\.signUp\(/);
   assert.match(login,/Daftar Email Pengguna/);
-  assert.match(login,/persetujuan Super Admin/);
+  assert.match(login,/Peran awal adalah Operator Sekolah/);
+  assert.doesNotMatch(login,/Pendaftaran email tidak otomatis memberikan akses ke data sekolah/);
 });
 test('login slogan matches approved ARF wording',()=>{
   assert.match(read('src/features/auth/LoginView.tsx'),/One Foundation - One Standard - One Schools/);
