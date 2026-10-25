@@ -97,7 +97,7 @@ Deno.serve(async(req:Request)=>{
      const current=await membership(target.id);
      if(current.error)throw failure('Tidak dapat memeriksa profil ARF.',503);
      if(current.data?.deleted_at)throw failure('Akun telah dihapus dari ARF. Hubungi administrator untuk pemulihan.',409);
-     if(current.data&&current.data.status==='ACTIVE'){
+     if(!newlyCreated && current.data&&current.data.status==='ACTIVE'){
        throw failure('Akun sudah terdaftar di ARF One School. Gunakan Edit untuk mengubah otorisasi.',409);
      }
      const {error}=await admin.from('arf_school_members').upsert({
