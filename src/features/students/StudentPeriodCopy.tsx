@@ -94,7 +94,7 @@ export const StudentPeriodCopy:React.FC<Props>=({
    }catch(err){
      setError(err instanceof Error?err.message:'Gagal menyalin data peserta didik.');
      // A partially completed import can be resumed without overwriting existing data.
-     await onFinished().catch(()=>{});
+     await Promise.resolve(onFinished()).catch(()=>{});
    }finally{setBusy(false);}
  };
  return <section className="space-y-4 rounded-xl border border-[#c89b55] bg-white p-4 sm:p-5">
