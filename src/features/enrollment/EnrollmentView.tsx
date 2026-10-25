@@ -195,7 +195,7 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({
     setFormData({
       class_id: `CLS-${Date.now().toString().slice(-6)}`,
       school_id: selectedSchoolId !== 'ALL' ? selectedSchoolId : (accessibleSchools[0]?.school_id || ''),
-      academic_year: masterActiveYear || '',
+      academic_year: (savedAcademicYears.includes(activeAcademicYear)?activeAcademicYear:masterActiveYear) || '',
       semester,
       grade_level: 'Kelas 1',
       class_name: '',
@@ -267,16 +267,24 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({
       return;
     }
 
-    if(editingClass && formData.school_id!==editingClass.school_id){
-      setFormError('Sekolah rombel yang telah terdaftar tidak boleh diganti melalui Edit.');return;
+    if(editingClass && (formData.school_id!==editingClass.school_id||
+      formData.academic_year!==editingClass.academic_year||formData.semester!==editingClass.semester)){
+      setFormError('Sekolah, Tahun Ajaran, dan Semester rombel terdaftar tidak boleh diubah. Buat rombel periode baru.');return;
     }
     const selectedTeacher=formData.homeroom_staff_id ?
       activeTeachers.find(person=>person.staff_id===formData.homeroom_staff_id):undefined;
     if(formData.homeroom_staff_id&&!selectedTeacher){
       setFormError('Wali Kelas harus guru aktif dari sekolah yang dipilih.');return;
     }
-    if (!editingClass && (!masterConnected || !masterActiveYear || formData.academic_year !== masterActiveYear)) {
-      setFormError('Aktifkan Tahun Ajaran pada Administrasi Sistem → Master Tahun Ajaran sebelum menambahkan rombel.');
+    if (!editingClass && (!masterConnected || !savedAcademicYears.includes(formData.academic_year))) {
+      setFormError('Pilih Tahun Ajaran yang sudah terdaftar pada Administrasi Sistem → Master Tahun Ajaran.');
+      return;
+    }
+    if (!editingClass && classes.some(c=>c.school_id===formData.school_id&&
+      c.academic_year===formData.academic_year&&c.semester===formData.semester&&
+      c.grade_level.trim().toLowerCase()===formData.grade_level.trim().toLowerCase()&&
+      c.class_name.trim().toLowerCase()===formData.class_name.trim().toLowerCase())){
+      setFormError('Nama Rombel sudah ada pada sekolah, tahun ajaran, semester, dan tingkat yang dipilih.');
       return;
     }
     setSubmitting(true);
@@ -389,7 +397,7 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({
             className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-[#073b2d] px-4 text-xs font-semibold text-[#073b2d] disabled:opacity-50">
             <Users className="h-4 w-4" /> Kelola Data Peserta Didik
           </button>
-          <button type="button" onClick={openAddModal} disabled={!accessibleSchools.length || !masterConnected || !masterActiveYear} className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-[#073b2d] px-4 text-xs font-semibold text-white shadow-sm hover:bg-[#0a4f3d] disabled:cursor-not-allowed disabled:opacity-50">
+          <button type="button" onClick={openAddModal} disabled={!accessibleSchools.length || !masterConnected || !savedAcademicYears.length} className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-[#073b2d] px-4 text-xs font-semibold text-white shadow-sm hover:bg-[#0a4f3d] disabled:cursor-not-allowed disabled:opacity-50">
             <Plus className="h-4 w-4" /> Tambah Rombel Baru
           </button>
         </div>
@@ -616,6 +624,28 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({
                     {accessibleSchools.map(s => (
                       <option key={s.school_id} value={s.school_id}>{s.school_name}</option>
                     ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Tahun Ajaran *</label>
+                  <select required value={formData.academic_year}
+                    disabled={Boolean(editingClass)}
+                    onChange={e=>setFormData({...formData,academic_year:e.target.value})}
+                    className="w-full rounded-lg border border-gray-300 bg-white p-2 text-xs">
+                    <option value="">Pilih Tahun Ajaran</option>
+                    {(editingClass
+                      ? [...new Set([editingClass.academic_year,...savedAcademicYears])]
+                      : savedAcademicYears).map(year=><option key={year} value={year}>{year}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Semester *</label>
+                  <select required value={formData.semester} disabled={Boolean(editingClass)}
+                    onChange={e=>setFormData({...formData,semester:e.target.value as Semester})}
+                    className="w-full rounded-lg border border-gray-300 bg-white p-2 text-xs">
+                    <option value="Ganjil">Ganjil</option>
+                    <option value="Genap">Genap</option>
                   </select>
                 </div>
 
