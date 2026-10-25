@@ -41,12 +41,12 @@ test('Excel import has prominent accessible colorful picker and filename',()=>{
  assert.match(view,/FileSpreadsheet/);
  assert.match(view,/selectedImportName\|\|'Belum ada file dipilih'/);
 });
-test('Classroom modal has only five user facing fields, teacher comes from active PTK',()=>{
+test('Classroom modal has five core fields plus year and semester, teacher from active PTK',()=>{
  const view=src('src/features/enrollment/EnrollmentView.tsx');
  const app=src('src/App.tsx');
  const service=src('src/services/enrollmentService.ts');
  const modal=view.slice(view.indexOf('{/* Modal Add / Edit Class */}'),view.indexOf('{/* Delete Classroom Confirmation Modal */}'));
- for(const label of ['Sekolah *','Tingkat Kelas *','Nama Rombel *','Kapasitas Maksimal *','Wali Kelas'])
+ for(const label of ['Sekolah *','Tahun Ajaran *','Semester *','Tingkat Kelas *','Nama Rombel *','Kapasitas Maksimal *','Wali Kelas'])
   assert.ok(modal.includes(label),'Missing class label: '+label);
  for(const removed of ['Siswa Laki-laki *','Siswa Perempuan *','Siswa Pindahan Masuk','Siswa Keluar / DO','Total Murid yang Dihitung'])
   assert.ok(!modal.includes(removed),'Obsolete class modal input: '+removed);
