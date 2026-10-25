@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {webcrypto} from 'node:crypto';
 import vm from 'node:vm';
-import ts from 'typescript';
+import * as ts from 'typescript';
 
 const file=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 const loadTs=(path,mocks={})=>{
