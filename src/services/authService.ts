@@ -63,7 +63,7 @@ export const authService = {
   },
   async getUserProfile(uid:string):Promise<UserProfile|null>{
     const {data,error}=await supabase.from('arf_school_members').select('*').eq('user_id',uid).maybeSingle();
-    if(error)throw error;return data?toProfile(data as Member):null;
+    if(error)throw error;return data&&!data.deleted_at?toProfile(data as Member):null;
   },
   /** Supabase Edge Function verifies live Auth JWT and ARF Super Admin membership.
    * No service-role key, password log, or Auth Admin API is exposed in the browser. */
@@ -103,14 +103,17 @@ export const authService = {
     const {data,error}=await supabase.from('arf_school_members').select('*').order('created_at',{ascending:false});
     if(error)throw error;return (data||[]).filter(x=>!x.deleted_at).map(x=>toProfile(x as Member));
   },
+  /** Backward-compatible helpers also use the guarded server workflow. */
   async updateUserRoleAndScope(uid:string,role:UserRole,assignedSchools:string[],assignedRegions:string[],position?:string):Promise<void>{
-    const {error}=await supabase.from('arf_school_members').update({role,assigned_schools:assignedSchools,assigned_regions:assignedRegions,
-      ...(position!==undefined?{position}:{}),updated_at:new Date().toISOString()}).eq('user_id',uid);
-    if(error)throw error;
+    const profile=await this.getUserProfile(uid);
+    if(!profile)throw new Error('Pengguna tidak ditemukan.');
+    await this.updateAuthorizedUser(uid,{
+      displayName:profile.displayName,position:position??profile.position??'',
+      role,status:profile.status,assignedSchools,assignedRegions
+    });
   },
   async updateUserStatus(uid:string,status:UserStatus):Promise<void>{
-    const {error}=await supabase.from('arf_school_members').update({status,updated_at:new Date().toISOString()}).eq('user_id',uid);
-    if(error)throw error;
+    await this.adminAction({action:'setStatus',userId:uid,status});
   },
   async inviteUser(invitation:Omit<UserInvitation,'id'|'createdAt'|'status'>):Promise<string>{
     const id=crypto.randomUUID();
