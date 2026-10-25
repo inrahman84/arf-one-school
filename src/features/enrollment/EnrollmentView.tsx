@@ -193,7 +193,7 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({
     setEditingClass(null);
     setFormError(null);
     setFormData({
-      class_id: `CLS-${Date.now().toString().slice(-6)}`,
+      class_id: `CLS-${crypto.randomUUID()}`,
       school_id: selectedSchoolId !== 'ALL' ? selectedSchoolId : (accessibleSchools[0]?.school_id || ''),
       academic_year: (savedAcademicYears.includes(activeAcademicYear)?activeAcademicYear:masterActiveYear) || '',
       semester,
