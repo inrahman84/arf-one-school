@@ -83,7 +83,7 @@ export const authService = {
   },
   async createAuthorizedUser(input:{
     displayName:string;email:string;position:string;role:UserRole;
-    assignedSchools:string[];assignedRegions:string[];password:string
+    assignedSchools:string[];assignedRegions:string[];password?:string;deliveryMode:'INVITE'|'PASSWORD'
   }){
     return this.adminAction({action:'create',...input});
   },
@@ -114,6 +114,9 @@ export const authService = {
   },
   async updateUserStatus(uid:string,status:UserStatus):Promise<void>{
     await this.adminAction({action:'setStatus',userId:uid,status});
+  },
+  async cancelInvitation(invitationId:string):Promise<void>{
+    await this.adminAction({action:'cancelInvitation',invitationId});
   },
   async inviteUser(invitation:Omit<UserInvitation,'id'|'createdAt'|'status'>):Promise<string>{
     const id=crypto.randomUUID();
