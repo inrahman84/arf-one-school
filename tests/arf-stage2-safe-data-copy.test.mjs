@@ -61,3 +61,14 @@ test('stage2 script passes bash syntax check and guards the target project ident
  assert.match(source,/CHECKSUM PASS/);
 });
 function requireBuiltinSpawn(){return {spawnSync:nodeSpawnSync};}
+
+test('Studio CSV literal null is accepted only for unscoped document schools and normalized on staging',()=>{
+ const migration=read('supabase/013_fix_csv_import_literal_null_school_id.sql');
+ const importSql=read('supabase/stage2_import_private_csv_inbox_to_staging.sql');
+ assert.match(migration,/lower\(btrim\(school_id\)\) IN \('null',''\)/i);
+ assert.match(migration,/collection_path LIKE 'schools\/%' AND school_id=split_part/i);
+ assert.match(migration,/project_ref FROM arf_migration\.project_identity/);
+ assert.match(importSql,/CASE WHEN collection_path<>'schools' AND collection_path NOT LIKE 'schools\/%'/);
+ assert.match(importSql,/CASE WHEN i\.collection_path<>'schools' AND i\.collection_path NOT LIKE 'schools\/%'/);
+ assert.match(importSql,/IS DISTINCT FROM s\.school_id/);
+});
