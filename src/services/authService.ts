@@ -5,7 +5,7 @@ import { db } from '../lib/backend';
 import type { UserProfile, UserInvitation, UserRole, UserStatus } from '../types';
 // Google OAuth requires an enabled Supabase provider and an approved Google Cloud OAuth client.
 export const GOOGLE_OAUTH_ENABLED = import.meta.env.VITE_GOOGLE_OAUTH_ENABLED === 'true';
-export const BOOTSTRAP_ADMIN_EMAIL = 'iswahyudhi.r@sumbermassarana.sch.id';
+export const BOOTSTRAP_ADMIN_EMAIL = 'iswahyudhi.nr@gmail.com';
 type Member = {user_id:string;email:string;display_name:string;position:string|null;role:UserRole;assigned_regions:string[];assigned_schools:string[];status:UserStatus;deleted_at?:string|null;created_at:string;updated_at:string};
 function toProfile(m:Member):UserProfile {return {uid:m.user_id,email:m.email,displayName:m.display_name,
   position:m.position || '',role:m.role,assignedRegions:m.assigned_regions||[],assignedSchools:m.assigned_schools||[],
@@ -83,7 +83,7 @@ export const authService = {
   },
   async createAuthorizedUser(input:{
     displayName:string;email:string;position:string;role:UserRole;
-    assignedSchools:string[];assignedRegions:string[];password:string
+    assignedSchools:string[];assignedRegions:string[];password?:string;deliveryMode:'INVITE'|'PASSWORD'
   }){
     return this.adminAction({action:'create',...input});
   },
@@ -114,6 +114,9 @@ export const authService = {
   },
   async updateUserStatus(uid:string,status:UserStatus):Promise<void>{
     await this.adminAction({action:'setStatus',userId:uid,status});
+  },
+  async cancelInvitation(invitationId:string):Promise<void>{
+    await this.adminAction({action:'cancelInvitation',invitationId});
   },
   async inviteUser(invitation:Omit<UserInvitation,'id'|'createdAt'|'status'>):Promise<string>{
     const id=crypto.randomUUID();

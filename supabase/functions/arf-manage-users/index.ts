@@ -2,6 +2,9 @@ import { createClient } from 'npm:@supabase/supabase-js@2.58.0';
 
 const SUPABASE_URL=Deno.env.get('SUPABASE_URL')||'';
 const SERVICE_KEY=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')||'';
+const EXPECTED_PROJECT_REF='tyonogxpoyzzzuxiwpwc';
+const SITE_URL=Deno.env.get('ARF_ONE_SCHOOL_SITE_URL')||'https://arf-one-school.vercel.app';
+const SHARED_PROJECT_REF='ovfygxeqgpjezdhbidmo';
 const allowedRoles=new Set([
  'SUPER_ADMIN','FOUNDATION_MANAGER','REGIONAL_LEAD','SCHOOL_PRINCIPAL',
  'SCHOOL_OPERATOR','HR_OFFICER','ASSET_OFFICER'
@@ -11,8 +14,12 @@ const admin=createClient(SUPABASE_URL,SERVICE_KEY,{
  auth:{autoRefreshToken:false,persistSession:false}
 });
 const failure=(message:string,status=400)=>({status,message});
+// Allow only production, the specific ARF One School Vercel team previews,
+// and local developer origins. This does not grant permissions: a live JWT and
+// ACTIVE SUPER_ADMIN membership are still required for every admin action.
 const originAllowed=(origin:string|null)=>!origin||
  origin==='https://arf-one-school.vercel.app'||
+ /^https:\/\/arf-one-school-[a-z0-9-]+-iswahyudhir-6587\.vercel\.app$/.test(origin)||
  /^http:\/\/localhost:(3000|5173)$/.test(origin);
 const headers=(origin:string|null)=>({
  'Content-Type':'application/json',
@@ -53,10 +60,16 @@ const activeAdminCount=async()=>{
 Deno.serve(async(req:Request)=>{
  const origin=req.headers.get('Origin');
  if(!originAllowed(origin))return response({error:'Origin tidak diizinkan.'},403,null);
+ // In preview, email links should return to the SAME approved preview origin.
+ // Supabase Auth URL Configuration must allow the preview domain/redirect.
+ const redirectSite=origin&&originAllowed(origin)?origin:SITE_URL;
  if(req.method==='OPTIONS')return new Response(null,{status:204,headers:headers(origin)});
  if(req.method!=='POST')return response({error:'Method not allowed'},405,origin);
  try{
-   if(!SUPABASE_URL||!SERVICE_KEY)throw failure('Konfigurasi layanan admin belum tersedia.',503);
+   const ref=/^https:\/\/([a-z0-9]+)\.supabase\.co\/?$/.exec(SUPABASE_URL)?.[1];
+   if(!SUPABASE_URL||!SERVICE_KEY||!EXPECTED_PROJECT_REF||!ref||
+     ref!==EXPECTED_PROJECT_REF||ref===SHARED_PROJECT_REF)
+     throw failure('Layanan admin harus menggunakan Supabase khusus ARF One School, bukan proyek bersama.',503);
    const authHeader=req.headers.get('Authorization')||'';
    if(!/^Bearer \S+$/.test(authHeader))throw failure('Harus login sebagai Super Admin.',401);
    const token=authHeader.slice(7);
@@ -82,16 +95,29 @@ Deno.serve(async(req:Request)=>{
        throw failure('Email dan nama lengkap wajib diisi dengan format yang valid.');
      if(!allowedRoles.has(role)||schoolIds===null||regionIds===null)
        throw failure('Peran atau lingkup sekolah/wilayah tidak valid.');
-     if(!validPassword(body.password))throw failure('Kata sandi minimal 12 karakter, mengandung huruf dan angka.');
+     const deliveryMode=str(body.deliveryMode,24)==='PASSWORD'?'PASSWORD':'INVITE';
+     if(deliveryMode==='PASSWORD'&&!validPassword(body.password))
+       throw failure('Kata sandi minimal 12 karakter, mengandung huruf dan angka.');
      let target=await authUserByEmail(email);
      let newlyCreated=false;
      if(!target){
-       const {data,error}=await admin.auth.admin.createUser({
-         email,password:String(body.password),email_confirm:true,
-         user_metadata:{full_name:displayName}
-       });
-       if(error||!data.user)throw failure('Gagal membuat akun Auth: '+(error?.message||'Unknown'),409);
-       target=data.user;
+       if(deliveryMode==='INVITE'){
+         // inviteUserByEmail sends an ACTUAL invitation email; createUser does not.
+         const {data,error}=await admin.auth.admin.inviteUserByEmail(email,{
+           data:{full_name:displayName},redirectTo:redirectSite+'/?setup_password=1'
+         });
+         if(error||!data.user)
+           throw failure('Email undangan belum terkirim: '+(error?.message||'Periksa SMTP/redirect URL'),503);
+         target=data.user;
+       }else{
+         const {data,error}=await admin.auth.admin.createUser({
+           email,password:String(body.password),email_confirm:true,
+           user_metadata:{full_name:displayName}
+         });
+         if(error||!data.user)
+           throw failure('Gagal membuat akun Auth: '+(error?.message||'Unknown'),409);
+         target=data.user;
+       }
        newlyCreated=true;
      }
      const current=await membership(target.id);
@@ -113,16 +139,45 @@ Deno.serve(async(req:Request)=>{
        }).eq('user_id',target.id);
        throw failure('Akun Auth dibuat, tetapi profil ARF gagal disimpan. Periksa kembali: '+error.message,500);
      }
-     // A pre-existing Auth account may serve a separate app. Its password is never changed.
-     return response({ok:true,createdAuth:newlyCreated,
-       message:newlyCreated?'Akun login dan akses ARF berhasil dibuat.':
-         'Akun Auth yang sudah ada telah diberi akses ARF; sandi Auth lama tidak diubah.'},200,origin);
+     // If a temporary password was created, email a link to set a fresh password.
+     // Existing Auth account is never silently changed and also receives a link.
+     const sendRecovery=deliveryMode==='PASSWORD'||!newlyCreated;
+     if(sendRecovery){
+       const {error:mailError}=await admin.auth.resetPasswordForEmail(email,{
+         redirectTo:redirectSite+'/?setup_password=1'
+       });
+       if(mailError)throw failure(
+         'Akun sudah tersimpan, tetapi email pengaturan sandi gagal: '+mailError.message+
+         '. Periksa SMTP dan URL redirect; jangan membuat akun ganda.',503);
+     }
+     return response({ok:true,createdAuth:newlyCreated,emailSent:true,
+       message:sendRecovery
+         ? 'Akun ARF tersimpan dan email pengaturan ulang sandi berhasil diminta.'
+         : 'Akun ARF tersimpan dan undangan email berhasil diminta. Pengguna perlu membuka tautan untuk membuat sandi.'
+     },200,origin);
+   }
+   if(action==='cancelInvitation'){
+     const invitationId=str(body.invitationId,80);
+     if(!/^[0-9a-f-]{36}$/i.test(invitationId))
+       throw failure('ID undangan tidak valid.');
+     const {data:row,error:lookupError}=await admin.from('arf_school_documents')
+       .select('path,content').eq('collection_path','userInvitations')
+       .eq('doc_id',invitationId).maybeSingle();
+     if(lookupError||!row)throw failure('Undangan tidak ditemukan pada proyek ARF One School.',404);
+     if(row.content?.status!=='PENDING')
+       throw failure('Hanya undangan berstatus Pending yang dapat dibatalkan.',409);
+     const {data:changed,error:writeError}=await admin.from('arf_school_documents')
+       .update({content:{...row.content,status:'REVOKED',revokedAt:new Date().toISOString(),revokedBy:user.id}})
+       .eq('path',row.path).eq('content->>status','PENDING')
+       .select('path').maybeSingle();
+     if(writeError||!changed)throw failure('Undangan telah diubah oleh pengguna lain. Muat ulang daftar.',409);
+     return response({ok:true,message:'Undangan pending berhasil dibatalkan.'},200,origin);
    }
    if(!userId||userId.length!==36)throw failure('Pilih pengguna yang valid.');
    const {data:target,error:targetError}=await membership(userId);
    if(targetError||!target||target.deleted_at)throw failure('Pengguna ARF tidak ditemukan.',404);
    const isSelf=userId===user.id;
-   const isBootstrap=target.email?.toLowerCase()==='iswahyudhi.r@sumbermassarana.sch.id';
+   const isBootstrap=target.email?.toLowerCase()==='iswahyudhi.nr@gmail.com';
    const lastAdmin=target.role==='SUPER_ADMIN'&&await activeAdminCount()<=1;
    if(action==='update'){
      const role=str(body.role,40),status=str(body.status,20);

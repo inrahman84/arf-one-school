@@ -13,13 +13,30 @@ This source code is derived from the latest uploaded ARF Dashboard V1.1 photo-up
 - Supabase private Storage bucket for school asset and facility photos
 - Vercel static SPA hosting
 
-## Supabase yang digunakan
+## Proyek Supabase wajib terpisah
 
-Aplikasi terhubung ke proyek Supabase pengguna yang sudah ada bernama **ARF Planner**. ARF One School memakai **tabel khusus** `arf_school_documents` dan `arf_school_members`, serta **bucket privat** `arf-one-school`. Struktur tabel dan Storage ini sudah diterapkan melalui migrasi Supabase dalam sesi pembuatan artefak.
+**ARF One School wajib memiliki project Supabase tersendiri.** Proyek **ARF Workspace / ARF Planner** tidak boleh digunakan untuk Auth, tabel, Storage, atau Edge Functions aplikasi ini.
 
-> **PENTING:** Ini bukan proyek Supabase baru. Penggunaan proyek bersama menghemat setup, tetapi batas kuota dan infrastruktur tetap berbagi dengan ARF Planner. Untuk memisahkan proyek di kemudian hari, buat proyek Supabase sendiri, jalankan migrasi pada folder `supabase/`, lalu atur variabel Vercel.
+Riwayat implementasi awal ternyata masih menggunakan project shared (ref `ovfygxeqgpjezdhbidmo`). Koneksi tersebut sudah tidak sesuai mandat pemisahan; **jangan gunakan untuk membuat akun atau mengolah data One School**. Branch pemisahan `fix/one-school-auth-isolation-and-invites` menolak konfigurasi kosong, ref salah, dan ref shared tersebut, tetapi **belum dapat diaktifkan di production sebelum akses ke proyek dedicated dikonfirmasi dan datanya disiapkan**.
 
-> **PENTING:** Data lama di Cloud Firestore **tidak otomatis pindah**. Belum dilakukan impor data asli atau file foto dari Firebase Storage. Aplikasi berawal dari koleksi ARF One School yang kosong dan dapat diisi lewat UI atau impor Excel.
+Dua environment variable **wajib** untuk build ARF One School di Vercel:
+
+```env
+VITE_SUPABASE_URL=https://tyonogxpoyzzzuxiwpwc.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=KUNCI_PUBLISHABLE_DARI_PROYEK_ARF_ONE_SCHOOL
+```
+
+Keduanya harus berasal dari project Supabase ARF One School dengan Project Reference ID `tyonogxpoyzzzuxiwpwc`. URL, publishable key, JWT user, dan Auth `auth.users` dari proyek lain **tidak kompatibel**.
+
+Untuk database baru: audit dan jalankan migrasi `supabase/001` sampai `009` **pada proyek ARF One School saja**, buat Storage bucket/Policies untuk foto, lalu deploy Edge Function `arf-manage-users` **ke proyek yang sama**. Edge Function memerlukan `ARF_ONE_SCHOOL_SITE_URL=https://arf-one-school.vercel.app`. Service-role key harus berada hanya di backend Supabase (tersedia melalui environment runtime proyek), bukan pada Vercel frontend.
+
+**Penting sebelum menjalankan migrasi atau deployment:**
+- Lakukan inventaris seluruh data sekolah, murid, PTK, aset, foto Storage, dan akun ARF pada project shared. Migrasi memerlukan ekspor yang disetujui dan penyalinan ke project dedicated dengan pemetaan ID yang konsisten. Jangan menghapus akun atau data lama dari Workspace/Planner sebagai bagian dari transisi.
+- Tetapkan Super Admin melalui prosedur bootstrap yang diverifikasi dalam project baru. Pendaftaran biasa menetapkan `SCHOOL_OPERATOR` tanpa scope; akun baru **tidak otomatis menjadi Super Admin**.
+- Di Authentication → URL Configuration, atur `Site URL` dan `Redirect URLs` agar mencakup `https://arf-one-school.vercel.app/` dan `https://arf-one-school.vercel.app/?setup_password=1`.
+- Di Authentication → SMTP, atur layanan pengirim email produksi, pengirim yang terverifikasi, dan template **Invite user** serta **Reset Password**. `auth.admin.createUser` memang tidak mengirim email; alur baru menggunakan `inviteUserByEmail` atau `resetPasswordForEmail`.
+- Uji login, penerimaan undangan dan perubahan sandi dengan **akun uji dan email yang Anda miliki**, baru alihkan produksi.
+- Tidak ada proses migrasi otomatis atau pembuatan proyek Supabase baru dalam branch ini.
 
 ## Menjalankan lokal
 
@@ -30,14 +47,7 @@ npm run build
 npm test
 ```
 
-Aplikasi menggunakan konfigurasi publishable URL/key Supabase yang sudah disertakan di `src/lib/supabase.ts`. Keduanya aman berada di frontend **asalkan RLS aktif**. Jangan meletakkan `service_role`/secret key di kode browser.
-
-Jika ingin menggunakan proyek Supabase berbeda, tambahkan `.env.local`:
-
-```
-VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLIC_PUBLISHABLE_KEY
-```
+Buat `.env.local` menggunakan `.env.example` dan isi URL dan publishable key Supabase khusus One School; project ref diperiksa terhadap `tyonogxpoyzzzuxiwpwc` dalam kode. Kode browser tidak boleh memuat kunci service-role/secret, dan aplikasi menolak proyek shared.
 
 ## Deployment Vercel
 

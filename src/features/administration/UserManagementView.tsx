@@ -44,6 +44,8 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ schools,
   const [editPasswordConfirm, setEditPasswordConfirm] = useState('');
   const [showEditPassword, setShowEditPassword] = useState(false);
   const [deleting, setDeleting] = useState<string|null>(null);
+  const [cancellingInvite,setCancellingInvite] = useState<string|null>(null);
+  const [deliveryMode,setDeliveryMode] = useState<'INVITE'|'PASSWORD'>('INVITE');
 
   // Invite Form
   const [inviteForm, setInviteForm] = useState({
@@ -95,6 +97,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ schools,
       assignedSchools: []
     });
     setCreatePassword('');setCreatePasswordConfirm('');setShowCreatePassword(false);
+    setDeliveryMode('INVITE');
     setInviteModalOpen(true);
   };
 
@@ -103,19 +106,21 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ schools,
     if(!inviteForm.email.trim() || !inviteForm.displayName.trim()){
       alert('Email dan nama lengkap wajib diisi.');return;
     }
-    if(createPassword.length<12||!/\d/.test(createPassword)||!/[a-zA-Z]/.test(createPassword)){
-      alert('Buat sandi minimal 12 karakter, mengandung huruf dan angka.');return;
-    }
-    if(createPassword!==createPasswordConfirm){
-      alert('Konfirmasi sandi belum sama.');return;
+    if(deliveryMode==='PASSWORD'){
+      if(createPassword.length<12||!/\d/.test(createPassword)||!/[a-zA-Z]/.test(createPassword)){
+        alert('Buat sandi minimal 12 karakter, mengandung huruf dan angka.');return;
+      }
+      if(createPassword!==createPasswordConfirm){
+        alert('Konfirmasi sandi belum sama.');return;
+      }
     }
     setSubmitting(true);
     try{
-      const result=await authService.createAuthorizedUser({...inviteForm,password:createPassword});
+      const result=await authService.createAuthorizedUser({...inviteForm,deliveryMode,password:deliveryMode==='PASSWORD'?createPassword:undefined});
       setCreatePassword('');setCreatePasswordConfirm('');
       setInviteModalOpen(false);
       await loadData();
-      alert(result.message||'Akun berhasil dibuat dan dapat login menggunakan email serta sandi.');
+      alert(result.message||'Akun disimpan. Periksa email undangan dan folder spam.');
     }catch(err:any){alert(err.message||'Gagal membuat akun pengguna');}
     finally{setSubmitting(false);}
   };
@@ -186,6 +191,18 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ schools,
       alert('Pengguna berhasil dihapus dari keanggotaan ARF One School.');
     }catch(err:any){alert(err.message||'Gagal menghapus pengguna.');}
     finally{setDeleting(null);}
+  };
+
+  const cancelPendingInvitation=async(inv:UserInvitation)=>{
+    if(!isSuperAdmin||inv.status!=='PENDING')return;
+    if(!window.confirm('Batalkan undangan Pending untuk '+inv.email+
+      '? Pembatalan tidak menghapus akun Auth yang sudah dibuat.'))return;
+    setCancellingInvite(inv.id);
+    try{
+      await authService.cancelInvitation(inv.id);
+      await loadData();
+    }catch(err){alert(err instanceof Error?err.message:'Gagal membatalkan undangan.');}
+    finally{setCancellingInvite(null);}
   };
 
   const filteredUsers = users.filter(u => {
@@ -393,6 +410,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ schools,
                   <th className="py-3 px-4">Peran Diberikan</th>
                   <th className="py-3 px-4">Diundang Oleh</th>
                   <th className="py-3 px-4 text-center">Status Undangan</th>
+                  <th className="py-3 px-4 text-center">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -408,6 +426,15 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ schools,
                       }`}>
                         {inv.status}
                       </span>
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      {isSuperAdmin&&inv.status==='PENDING'&&(
+                        <button type="button" disabled={cancellingInvite===inv.id}
+                          onClick={()=>void cancelPendingInvitation(inv)}
+                          className="rounded-lg border border-rose-300 px-2 py-1 text-xs font-semibold text-rose-700 disabled:opacity-50">
+                          {cancellingInvite===inv.id?'Membatalkan...':'Batalkan Undangan'}
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -448,7 +475,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ schools,
                   className="w-full text-xs p-2.5 rounded-lg border border-gray-300"
                   required
                 />
-                <p className="text-[11px] text-[#5f5d5d] mt-1">Akun login dibuat menggunakan email dan kata sandi yang Anda tentukan. Berikan sandi hanya melalui saluran aman.</p>
+                <p className="text-[11px] text-[#5f5d5d] mt-1">Pilih undangan email (disarankan), atau buat sandi sementara. Sistem akan meminta layanan Supabase mengirim email aktivasi/pengaturan sandi.</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -483,25 +510,46 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ schools,
               </div>
 
               <div className="rounded-xl border border-[#c89b55]/50 bg-[#f6f3ec] p-3 space-y-3">
-                <p className="flex items-center gap-2 text-xs font-bold text-[#073b2d]"><KeyRound className="w-4 h-4"/> Buat Sandi Pengguna *</p>
-                <p className="text-[11px] text-gray-600">Sandi minimal 12 karakter (huruf dan angka). Tidak disimpan pada profil ARF dan tidak dikirim otomatis melalui email.</p>
-                <label className="block text-xs font-semibold">Kata Sandi Baru
-                  <div className="mt-1 flex gap-2">
-                    <input type={showCreatePassword?'text':'password'} autoComplete="new-password"
-                      value={createPassword} onChange={e=>setCreatePassword(e.target.value)}
-                      minLength={12} required className="min-w-0 flex-1 rounded-lg border border-gray-300 p-2.5 text-xs"/>
-                    <button type="button" onClick={()=>setShowCreatePassword(v=>!v)}
-                      aria-label={showCreatePassword?'Sembunyikan sandi':'Tampilkan sandi'}
-                      className="rounded-lg border border-gray-300 p-2">
-                      {showCreatePassword?<EyeOff className="w-4 h-4"/>:<Eye className="w-4 h-4"/>}
-                    </button>
+                <p className="text-xs font-bold text-[#073b2d]">Metode Aktivasi Pengguna</p>
+                <label className="flex items-start gap-2 text-xs">
+                  <input type="radio" name="arf-create-delivery" checked={deliveryMode==='INVITE'}
+                    onChange={()=>{setDeliveryMode('INVITE');setCreatePassword('');setCreatePasswordConfirm('')}}/>
+                  <span><strong>Kirim undangan melalui email (disarankan).</strong>
+                    Pengguna membuat sandi sendiri dari tautan undangan Supabase.</span>
+                </label>
+                <label className="flex items-start gap-2 text-xs">
+                  <input type="radio" name="arf-create-delivery" checked={deliveryMode==='PASSWORD'}
+                    onChange={()=>setDeliveryMode('PASSWORD')}/>
+                  <span><strong>Buat sandi sementara.</strong>
+                    Akun dibuat dengan sandi awal, lalu email pengaturan ulang sandi dikirim.</span>
+                </label>
+                {deliveryMode==='PASSWORD'&&(
+                  <div className="space-y-3">
+                    <p className="flex items-center gap-2 text-xs font-bold text-[#073b2d]">
+                      <KeyRound className="h-4 w-4"/> Buat Sandi Pengguna *
+                    </p>
+                    <label className="block text-xs font-semibold">Kata Sandi Awal
+                      <div className="mt-1 flex gap-2">
+                        <input type={showCreatePassword?'text':'password'} autoComplete="new-password"
+                          value={createPassword} onChange={e=>setCreatePassword(e.target.value)}
+                          minLength={12} required className="min-w-0 flex-1 rounded-lg border border-gray-300 p-2.5 text-xs"/>
+                        <button type="button" onClick={()=>setShowCreatePassword(v=>!v)}
+                          aria-label={showCreatePassword?'Sembunyikan sandi':'Tampilkan sandi'}
+                          className="rounded-lg border border-gray-300 p-2">
+                          {showCreatePassword?<EyeOff className="h-4 w-4"/>:<Eye className="h-4 w-4"/>}
+                        </button>
+                      </div>
+                    </label>
+                    <label className="block text-xs font-semibold">Konfirmasi Kata Sandi
+                      <input type="password" autoComplete="new-password" value={createPasswordConfirm}
+                        onChange={e=>setCreatePasswordConfirm(e.target.value)} minLength={12} required
+                        className="mt-1 w-full rounded-lg border border-gray-300 p-2.5 text-xs"/>
+                    </label>
                   </div>
-                </label>
-                <label className="block text-xs font-semibold">Konfirmasi Kata Sandi
-                  <input type="password" autoComplete="new-password" value={createPasswordConfirm}
-                    onChange={e=>setCreatePasswordConfirm(e.target.value)} minLength={12} required
-                    className="mt-1 w-full rounded-lg border border-gray-300 p-2.5 text-xs"/>
-                </label>
+                )}
+                <p className="text-[11px] text-gray-600">
+                  Email hanya dapat terkirim apabila SMTP, template, dan URL redirect pada proyek Supabase ARF One School sudah dikonfigurasi.
+                </p>
               </div>
               {/* School Assignment Checklist */}
               {inviteForm.role !== 'SUPER_ADMIN' && inviteForm.role !== 'FOUNDATION_MANAGER' && (
@@ -569,7 +617,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ schools,
                   className="px-4 py-2 rounded-lg text-white font-semibold text-xs shadow-sm"
                   style={{ backgroundColor: '#073b2d' }}
                 >
-                  {submitting ? 'Memproses...' : 'Simpan &amp; Otorisasi Pengguna'}
+                  {submitting ? 'Memproses...' : 'Simpan Pengguna Baru'}
                 </button>
               </div>
             </form>
