@@ -47,7 +47,7 @@ test('Invitation email can set personal password after authenticated email token
  const setup=read('src/features/auth/SetPasswordView.tsx');
  const app=read('src/App.tsx');
  assert.match(app,/setup_password'\) === '1'/);
- assert.match(app,/<SetPasswordView\/>/);
+ assert.match(app,/<SetPasswordView\s*\/>/);
  assert.match(setup,/supabase\.auth\.updateUser\(\{password\}\)/);
  assert.match(setup,/supabase\.auth\.getUser\(\)/);
  assert.match(setup,/Simpan Sandi dan Lanjutkan/);
