@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { Sidebar, NavItemKey } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
 import { LoginView } from './features/auth/LoginView';
+import { SetPasswordView } from './features/auth/SetPasswordView';
 import { DashboardView } from './features/dashboard/DashboardView';
 import { SchoolsListView } from './features/schools/SchoolsListView';
 import { SchoolDetailView } from './features/schools/SchoolDetailView';
@@ -137,6 +138,12 @@ const MainAppContent: React.FC = () => {
   // If not logged in
   if (!currentUser) {
     return <LoginView />;
+  }
+
+  // Invitation/recovery link has been exchanged into an authenticated session.
+  // Keep the user on password setup before opening any school data.
+  if (new URLSearchParams(window.location.search).get('setup_password') === '1') {
+    return <SetPasswordView />;
   }
 
   // Account status check (e.g. INACTIVE)
