@@ -17,19 +17,18 @@ This source code is derived from the latest uploaded ARF Dashboard V1.1 photo-up
 
 **ARF One School wajib memiliki project Supabase tersendiri.** Proyek **ARF Workspace / ARF Planner** tidak boleh digunakan untuk Auth, tabel, Storage, atau Edge Functions aplikasi ini.
 
-Riwayat implementasi awal ternyata masih menggunakan project shared (ref `ovfygxeqgpjezdhbidmo`). Koneksi tersebut sudah tidak sesuai mandat pemisahan; **jangan gunakan untuk membuat akun atau mengolah data One School**. Branch pemisahan `fix/one-school-auth-isolation-and-invites` menolak konfigurasi kosong, ref salah, dan ref shared tersebut, tetapi **belum dapat diaktifkan di production sebelum proyek dedicated tersedia dan datanya disiapkan**.
+Riwayat implementasi awal ternyata masih menggunakan project shared (ref `ovfygxeqgpjezdhbidmo`). Koneksi tersebut sudah tidak sesuai mandat pemisahan; **jangan gunakan untuk membuat akun atau mengolah data One School**. Branch pemisahan `fix/one-school-auth-isolation-and-invites` menolak konfigurasi kosong, ref salah, dan ref shared tersebut, tetapi **belum dapat diaktifkan di production sebelum akses ke proyek dedicated dikonfirmasi dan datanya disiapkan**.
 
-Tiga environment variable **wajib** untuk build ARF One School di Vercel:
+Dua environment variable **wajib** untuk build ARF One School di Vercel:
 
 ```env
-VITE_SUPABASE_URL=https://REF_PROYEK_ARF_ONE_SCHOOL.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=KUNCI_PUBLISHABLE_PROYEK_ARF_ONE_SCHOOL
-VITE_ARF_ONE_SCHOOL_SUPABASE_REF=REF_PROYEK_ARF_ONE_SCHOOL
+VITE_SUPABASE_URL=https://tyonogxpoyzzzuxiwpwc.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=KUNCI_PUBLISHABLE_DARI_PROYEK_ARF_ONE_SCHOOL
 ```
 
-Ketiganya harus berasal dari project Supabase khusus One School. URL, publishable key, JWT user, dan Auth `auth.users` dari proyek lain **tidak kompatibel**.
+Keduanya harus berasal dari project Supabase ARF One School dengan Project Reference ID `tyonogxpoyzzzuxiwpwc`. URL, publishable key, JWT user, dan Auth `auth.users` dari proyek lain **tidak kompatibel**.
 
-Untuk database baru: audit dan jalankan migrasi `supabase/001` sampai `009` **pada proyek ARF One School saja**, buat Storage bucket/Policies untuk foto, lalu deploy Edge Function `arf-manage-users` **ke proyek yang sama**. Edge Function memerlukan secret `ARF_ONE_SCHOOL_SUPABASE_REF` sama dengan project ref dan `ARF_ONE_SCHOOL_SITE_URL=https://arf-one-school.vercel.app`. Service-role key harus berada hanya di backend Supabase (tersedia melalui environment runtime proyek), bukan pada Vercel frontend.
+Untuk database baru: audit dan jalankan migrasi `supabase/001` sampai `009` **pada proyek ARF One School saja**, buat Storage bucket/Policies untuk foto, lalu deploy Edge Function `arf-manage-users` **ke proyek yang sama**. Edge Function memerlukan `ARF_ONE_SCHOOL_SITE_URL=https://arf-one-school.vercel.app`. Service-role key harus berada hanya di backend Supabase (tersedia melalui environment runtime proyek), bukan pada Vercel frontend.
 
 **Penting sebelum menjalankan migrasi atau deployment:**
 - Lakukan inventaris seluruh data sekolah, murid, PTK, aset, foto Storage, dan akun ARF pada project shared. Migrasi memerlukan ekspor yang disetujui dan penyalinan ke project dedicated dengan pemetaan ID yang konsisten. Jangan menghapus akun atau data lama dari Workspace/Planner sebagai bagian dari transisi.
@@ -48,7 +47,7 @@ npm run build
 npm test
 ```
 
-Buat `.env.local` menggunakan `.env.example` dan isi URL, publishable key serta project ref Supabase khusus One School. Kode browser tidak boleh memuat kunci service-role/secret, dan aplikasi menolak proyek shared.
+Buat `.env.local` menggunakan `.env.example` dan isi URL dan publishable key Supabase khusus One School; project ref diperiksa terhadap `tyonogxpoyzzzuxiwpwc` dalam kode. Kode browser tidak boleh memuat kunci service-role/secret, dan aplikasi menolak proyek shared.
 
 ## Deployment Vercel
 
