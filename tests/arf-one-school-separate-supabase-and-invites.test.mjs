@@ -68,7 +68,9 @@ test('first Super Admin bootstrap is restricted to an existing email-verified de
  assert.match(sql,/lower\(email\)='iswahyudhi\.nr@gmail\.com'/);
  assert.match(sql,/IF v_admins <> 0 THEN/);
  assert.match(sql,/IF v_user_id IS NULL THEN/);
- assert.match(sql,/on conflict \(user_id\) DO UPDATE/i);
+ assert.match(sql,/UPDATE public\.arf_school_members/i);
+ assert.match(sql,/AND role='SCHOOL_OPERATOR'/);
+ assert.match(sql,/deleted_at IS NULL/);
  assert.doesNotMatch(sql,/insert into auth\.users/i);
  assert.doesNotMatch(sql,/update auth\.users/i);
 });
