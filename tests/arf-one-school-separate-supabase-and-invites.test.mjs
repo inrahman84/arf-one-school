@@ -23,7 +23,9 @@ test('Creation sends Supabase invitation email by default or a recovery email fo
  assert.match(server,/admin\.auth\.admin\.inviteUserByEmail\(email/);
  assert.match(server,/admin\.auth\.resetPasswordForEmail\(email/);
  assert.match(server,/deliveryMode==='PASSWORD'/);
- assert.match(server,/redirectTo:SITE_URL\+'\/\?setup_password=1'/);
+ assert.match(server,/redirectTo:redirectSite\+'\/\?setup_password=1'/);
+ assert.match(server,/originAllowed\(origin\)\?origin:SITE_URL/);
+ assert.match(server,/arf-one-school-\[a-z0-9-\]\+-iswahyudhir-6587/);
  assert.match(server,/emailSent:true/);
  assert.match(server,/ref!==EXPECTED_PROJECT_REF\|\|ref===SHARED_PROJECT_REF/);
  assert.match(server,/EXPECTED_PROJECT_REF='tyonogxpoyzzzuxiwpwc'/);
