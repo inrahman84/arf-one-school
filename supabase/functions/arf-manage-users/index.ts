@@ -14,8 +14,12 @@ const admin=createClient(SUPABASE_URL,SERVICE_KEY,{
  auth:{autoRefreshToken:false,persistSession:false}
 });
 const failure=(message:string,status=400)=>({status,message});
+// Allow only production, the specific ARF One School Vercel team previews,
+// and local developer origins. This does not grant permissions: a live JWT and
+// ACTIVE SUPER_ADMIN membership are still required for every admin action.
 const originAllowed=(origin:string|null)=>!origin||
  origin==='https://arf-one-school.vercel.app'||
+ /^https:\/\/arf-one-school-[a-z0-9-]+-iswahyudhir-6587\.vercel\.app$/.test(origin)||
  /^http:\/\/localhost:(3000|5173)$/.test(origin);
 const headers=(origin:string|null)=>({
  'Content-Type':'application/json',
@@ -56,6 +60,9 @@ const activeAdminCount=async()=>{
 Deno.serve(async(req:Request)=>{
  const origin=req.headers.get('Origin');
  if(!originAllowed(origin))return response({error:'Origin tidak diizinkan.'},403,null);
+ // In preview, email links should return to the SAME approved preview origin.
+ // Supabase Auth URL Configuration must allow the preview domain/redirect.
+ const redirectSite=origin&&originAllowed(origin)?origin:SITE_URL;
  if(req.method==='OPTIONS')return new Response(null,{status:204,headers:headers(origin)});
  if(req.method!=='POST')return response({error:'Method not allowed'},405,origin);
  try{
@@ -97,7 +104,7 @@ Deno.serve(async(req:Request)=>{
        if(deliveryMode==='INVITE'){
          // inviteUserByEmail sends an ACTUAL invitation email; createUser does not.
          const {data,error}=await admin.auth.admin.inviteUserByEmail(email,{
-           data:{full_name:displayName},redirectTo:SITE_URL+'/?setup_password=1'
+           data:{full_name:displayName},redirectTo:redirectSite+'/?setup_password=1'
          });
          if(error||!data.user)
            throw failure('Email undangan belum terkirim: '+(error?.message||'Periksa SMTP/redirect URL'),503);
@@ -137,7 +144,7 @@ Deno.serve(async(req:Request)=>{
      const sendRecovery=deliveryMode==='PASSWORD'||!newlyCreated;
      if(sendRecovery){
        const {error:mailError}=await admin.auth.resetPasswordForEmail(email,{
-         redirectTo:SITE_URL+'/?setup_password=1'
+         redirectTo:redirectSite+'/?setup_password=1'
        });
        if(mailError)throw failure(
          'Akun sudah tersimpan, tetapi email pengaturan sandi gagal: '+mailError.message+
