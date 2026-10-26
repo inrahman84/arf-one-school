@@ -77,7 +77,7 @@ where s.collection_path <> 'userInvitations'
 on conflict(path) do nothing;
 
 -- Atomic end-of-transaction verification. Stop and rollback on ANY mismatch.
-do $
+do $verify$
 declare v_live integer; v_diff integer; v_extra integer;
 begin
   select count(*) into v_live from public.arf_school_documents;
@@ -100,7 +100,7 @@ begin
   if v_extra <> 0 then
     raise exception 'Archived invitations present in live documents, rolling back';
   end if;
-end $;
+end $verify$;
 commit;
 
 -- Verification: ZERO conflicts; source needs its own parallel checksum
