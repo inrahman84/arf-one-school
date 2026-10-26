@@ -12,7 +12,7 @@
 ## Prasyarat keras (belum terpenuhi saat panduan dibuat)
 1. **Backup terenkripsi Tahap 1** untuk proyek sumber sudah benar-benar dihasilkan; berhasil didekripsi dan diuji restore di lingkungan terisolasi, beserta manifest checksum. Source DB tidak boleh dimodifikasi.
 2. Ada saluran kerja tepercaya dengan PostgreSQL `psql`, `age`, dan akses database owner untuk SOURCE dan TARGET; kedua connection string berbeda. Jangan tempel password/kunci ke chat, GitHub, atau build log.
-3. Identitas tujuan diverifikasi: `tyonogxpoyzzzuxiwpwc`. Target memiliki tabel `public.arf_school_documents` dan `arf_migration.document_stage`.
+3. Identitas tujuan diverifikasi: `tyonogxpoyzzzuxiwpwc`. Target memiliki tabel `public.arf_school_documents`, `arf_migration.document_stage`, dan `arf_migration.project_identity` sebagai pemeriksaan identitas tujuan. Ketiga objek ini sudah tersedia pada target.
 4. Untuk snapshot **akhir**, hentikan perubahan data ARF One School pada aplikasi lama (*write freeze*) sebelum ekspor, dan lakukan pemeriksaan ulang hitungan serta checksum setelahnya.
 
 ## 1. Siapkan koneksi aman (pada workstation tepercaya)
@@ -54,7 +54,7 @@ export ENCRYPTED_EXPORT="$HOME/secure-backups/arf-one-school-2026-10-26.csv.age"
 bash scripts/arf_stage2_encrypted_transfer.sh
 ```
 
-Skrip mengalirkan `\copy` langsung ke `age` dan menyimpan hanya ciphertext di disk; hasil enkripsi diperiksa melalui decrypt stream. CSV berisi seluruh 133 dokumen, termasuk undangan lama **hanya untuk arsip tertutup**. Skrip tidak menulis/menghapus SOURCE dan tidak mempromosikan data apa pun ke `public`. Staging privat hanya bisa diakses menggunakan koneksi administrator PostgreSQL, tanpa kebijakan akses `anon`/`authenticated`.
+Skrip mengalirkan `\copy` langsung ke `age` dan menyimpan hanya ciphertext di disk; hasil enkripsi diperiksa melalui decrypt stream. CSV berisi seluruh 133 dokumen, termasuk undangan lama **hanya untuk arsip tertutup**. Skrip memeriksa marker database tujuan `tyonogxpoyzzzuxiwpwc` sebelum ekspor, lalu mencocokkan checksum semua koleksi sumber dan staging secara otomatis. Skrip tidak menulis/menghapus SOURCE dan tidak mempromosikan data apa pun ke `public`. Staging privat hanya bisa diakses menggunakan koneksi administrator PostgreSQL, tanpa kebijakan akses `anon`/`authenticated`.
 
 **Catatan:** Jika staging berisi baris karena pengujian sebelumnya, skrip akan berhenti. Jangan kosongkan staging otomatis tanpa menyimpan backup dan mencatat batch sebelumnya.
 
@@ -114,3 +114,10 @@ Seluruh checksum live harus cocok dengan snapshot SOURCE yang sama (kecuali unda
 
 ## Audit pekerjaan sekarang
 Area staging privat `arf_migration.document_stage` telah dibuat di TARGET. Skrip dan transaksi promosi sudah tersedia dalam PR, tetapi **backup terenkripsi dan pemindahan seluruh dokumen tidak dijalankan melalui ChatGPT**, karena alat sebelumnya memblokir penyalinan otomatis data yang berisi identitas anak. Tidak ada cara pemindahan yang melewati perlindungan tersebut yang dicoba.
+
+## Verifikasi koneksi dan batasan eksekusi (26 Okt 2026)
+- Akun Super Admin ACTIVE terkonfirmasi pada target (1 user), staging masih 0 baris, dokumen target 30, dokumen source 133.
+- Identitas target `arf_migration.project_identity` telah dibuat dan diverifikasi melalui Supabase connector, jadi skrip migrasi kini menolak koneksi tujuan yang keliru.
+- Skrip Bash lulus syntax checking dan source tests di GitHub CI. **Tidak ada data yang dikirim** oleh build atau test tersebut.
+- Ekspor aktual tetap memerlukan `psql`, akses ke kedua koneksi PostgreSQL, dan key age dari komputer tepercaya; informasi rahasia tidak boleh disalin ke GitHub/chat. 
+- Setelah operator menjalankan skrip, lakukan promosi dan uji akses/login sebelum mengganti konfigurasi produksi.
