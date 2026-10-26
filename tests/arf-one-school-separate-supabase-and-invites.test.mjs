@@ -65,7 +65,7 @@ test('legacy cross-app auto permission from invited documents is disabled in ded
 test('first Super Admin bootstrap is restricted to an existing email-verified dedicated Auth account',()=>{
  const sql=read('supabase/bootstrap_verified_one_school_admin.sql');
  assert.match(sql,/email_confirmed_at IS NOT NULL/);
- assert.match(sql,/lower\(email\)='iswahyudhi\.r@sumbermassarana\.sch\.id'/);
+ assert.match(sql,/lower\(email\)='iswahyudhi\.nr@gmail\.com'/);
  assert.match(sql,/IF v_admins <> 0 THEN/);
  assert.match(sql,/IF v_user_id IS NULL THEN/);
  assert.match(sql,/on conflict \(user_id\) DO UPDATE/i);
