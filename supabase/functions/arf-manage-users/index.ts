@@ -2,7 +2,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2.58.0';
 
 const SUPABASE_URL=Deno.env.get('SUPABASE_URL')||'';
 const SERVICE_KEY=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')||'';
-const EXPECTED_PROJECT_REF=Deno.env.get('ARF_ONE_SCHOOL_SUPABASE_REF')||'';
+const EXPECTED_PROJECT_REF='tyonogxpoyzzzuxiwpwc';
 const SITE_URL=Deno.env.get('ARF_ONE_SCHOOL_SITE_URL')||'https://arf-one-school.vercel.app';
 const SHARED_PROJECT_REF='ovfygxeqgpjezdhbidmo';
 const allowedRoles=new Set([
