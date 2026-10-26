@@ -177,7 +177,7 @@ Deno.serve(async(req:Request)=>{
    const {data:target,error:targetError}=await membership(userId);
    if(targetError||!target||target.deleted_at)throw failure('Pengguna ARF tidak ditemukan.',404);
    const isSelf=userId===user.id;
-   const isBootstrap=target.email?.toLowerCase()==='iswahyudhi.r@sumbermassarana.sch.id';
+   const isBootstrap=target.email?.toLowerCase()==='iswahyudhi.nr@gmail.com';
    const lastAdmin=target.role==='SUPER_ADMIN'&&await activeAdminCount()<=1;
    if(action==='update'){
      const role=str(body.role,40),status=str(body.status,20);
