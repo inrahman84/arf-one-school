@@ -1,8 +1,8 @@
 -- Execute from the TARGET database ONLY after:
--- (1) an encrypted source backup has been created and restore-tested,
--- (2) SOURCE writes are frozen for the final snapshot,
+-- (1) original source remains intact; an operator-held CSV snapshot was exported,
+-- (2) compare SHA-256 of all source vs staging collections immediately before promotion,
 -- (3) all source rows have arrived in arf_migration.document_stage,
--- (4) the expected source count/manifest are validated.
+-- (4) SOURCE and imported CSV snapshot have identical full collection digests.
 --
 -- Use psql with -v ON_ERROR_STOP=1 against the dedicated target,
 -- NEVER the ARF Workspace / Planner source.
@@ -19,6 +19,9 @@ declare
   to_promote integer;
   legacy_invites integer;
 begin
+  if (select project_ref from arf_migration.project_identity where singleton=true) is distinct from 'tyonogxpoyzzzuxiwpwc' then
+    raise exception 'Incorrect destination project; abort';
+  end if;
   expected_rows := nullif(current_setting('arf_migration.expected_stage_rows',true),'')::integer;
   select count(*) into staged_rows from arf_migration.document_stage;
   if expected_rows is null or expected_rows <= 0 or staged_rows <> expected_rows then
@@ -27,7 +30,7 @@ begin
 
   select count(*) into legacy_invites from arf_migration.document_stage
   where collection_path='userInvitations';
-  if legacy_invites < 0 then raise exception 'Invalid legacy invitations'; end if;
+  if legacy_invites <> 2 then raise exception 'Expected 2 archived legacy invitations, found %', legacy_invites; end if;
 
   -- Destination contents must NEVER be overwritten if they differ.
   select count(*) into conflict_rows
@@ -73,6 +76,31 @@ from arf_migration.document_stage s
 where s.collection_path <> 'userInvitations'
 on conflict(path) do nothing;
 
+-- Atomic end-of-transaction verification. Stop and rollback on ANY mismatch.
+do $
+declare v_live integer; v_diff integer; v_extra integer;
+begin
+  select count(*) into v_live from public.arf_school_documents;
+  if v_live <> 131 then
+    raise exception 'Expected 131 live documents, found %, rolling back', v_live;
+  end if;
+  select count(*) into v_diff
+  from arf_migration.document_stage s
+  left join public.arf_school_documents d on s.path=d.path
+  where s.collection_path <> 'userInvitations'
+    and (d.path is null or d.content is distinct from s.content
+         or d.doc_id is distinct from s.doc_id
+         or d.school_id is distinct from s.school_id
+         or d.collection_path is distinct from s.collection_path);
+  if v_diff <> 0 then
+    raise exception '% restored documents differ from staging, rolling back', v_diff;
+  end if;
+  select count(*) into v_extra from public.arf_school_documents
+  where collection_path='userInvitations';
+  if v_extra <> 0 then
+    raise exception 'Archived invitations present in live documents, rolling back';
+  end if;
+end $;
 commit;
 
 -- Verification: ZERO conflicts; source needs its own parallel checksum
