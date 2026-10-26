@@ -30,6 +30,19 @@ if [[ "$target_confirm" != "tyonogxpoyzzzuxiwpwc" ]]; then
   echo "Destination confirmation failed. No export or import performed." >&2
   exit 3
 fi
+echo "Verifying dedicated target identity marker..."
+actual_target="$(psql "service=$TARGET_SERVICE" -X -A -t -q -v ON_ERROR_STOP=1 \
+  -c 'select project_ref from arf_migration.project_identity where singleton is true')"
+if [[ "$actual_target" != "tyonogxpoyzzzuxiwpwc" ]]; then
+  echo "Wrong target: dedicated project identity missing. ABORT." >&2
+  exit 4
+fi
+wrong_source="$(psql "service=$SOURCE_SERVICE" -X -A -t -q -v ON_ERROR_STOP=1 \
+  -c "select coalesce(to_regclass('arf_migration.project_identity')::text,'')")"
+if [[ "$wrong_source" == "arf_migration.project_identity" ]]; then
+  echo "Source is target project. ABORT." >&2
+  exit 4
+fi
 echo "Encrypting source-only ARF One School snapshot..."
 psql "service=$SOURCE_SERVICE" -X -q -v ON_ERROR_STOP=1 -c \
   '\copy (select path,collection_path,doc_id,school_id,content,created_at,updated_at from public.arf_school_documents order by path) to stdout with (format csv, header true)' \
@@ -52,4 +65,25 @@ age -d -i "$AGE_IDENTITY_FILE" "$ENCRYPTED_EXPORT" \
 echo "Private staging counts (no student or staff data printed):"
 psql "service=$TARGET_SERVICE" -X -v ON_ERROR_STOP=1 -c \
   "select collection_path,count(*) as records from arf_migration.document_stage group by collection_path order by collection_path;"
-echo "STAGING COMPLETE. Before promotion: freeze One School writes, reconcile snapshots, and verify backup restore."
+echo "Verifying every source and staged document checksum (no personal data printed)..."
+manifest_sql=$(cat <<'SQL'
+with per as (
+ select collection_path,path,
+ encode(sha256(convert_to(content::text,'UTF8')),'hex') as digest
+ from %DOCUMENT_TABLE%
+)
+select collection_path||'|'||count(*)||'|'||
+ encode(sha256(convert_to(string_agg(path||':'||digest,E'\n' order by path),'UTF8')),'hex')
+from per group by collection_path order by collection_path;
+SQL
+)
+source_sql="${manifest_sql//%DOCUMENT_TABLE%/public.arf_school_documents}"
+target_sql="${manifest_sql//%DOCUMENT_TABLE%/arf_migration.document_stage}"
+source_manifest="$(psql "service=$SOURCE_SERVICE" -X -A -t -q -v ON_ERROR_STOP=1 -c "$source_sql")"
+target_manifest="$(psql "service=$TARGET_SERVICE" -X -A -t -q -v ON_ERROR_STOP=1 -c "$target_sql")"
+if [[ "$source_manifest" != "$target_manifest" ]]; then
+  echo "CRITICAL: source and private staging checksum mismatch. DO NOT PROMOTE." >&2
+  exit 6
+fi
+echo "CHECKSUM PASS: collection identities, counts and payload digests match."
+echo "Encrypted snapshot restored into private staging. Promotion requires backup verification, write freeze and owner approval."
