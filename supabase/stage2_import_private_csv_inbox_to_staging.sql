@@ -24,7 +24,9 @@ END
 $$;
 INSERT INTO arf_migration.document_stage
  (path,collection_path,doc_id,school_id,content,created_at,updated_at)
-SELECT path,collection_path,doc_id,school_id,
+SELECT path,collection_path,doc_id,
+       CASE WHEN collection_path<>'schools' AND collection_path NOT LIKE 'schools/%'
+              THEN NULL ELSE school_id END AS school_id,
        convert_from(decode(content_b64,'base64'),'UTF8')::jsonb,
        created_at,updated_at
 FROM arf_migration.csv_inbox
@@ -43,7 +45,8 @@ BEGIN
  FROM arf_migration.csv_inbox i JOIN arf_migration.document_stage s USING (path)
  WHERE i.collection_path IS DISTINCT FROM s.collection_path
     OR i.doc_id IS DISTINCT FROM s.doc_id
-    OR i.school_id IS DISTINCT FROM s.school_id
+    OR (CASE WHEN i.collection_path<>'schools' AND i.collection_path NOT LIKE 'schools/%'
+                  THEN NULL ELSE i.school_id END) IS DISTINCT FROM s.school_id
     OR convert_from(decode(i.content_b64,'base64'),'UTF8')::jsonb IS DISTINCT FROM s.content
     OR i.created_at IS DISTINCT FROM s.created_at
     OR i.updated_at IS DISTINCT FROM s.updated_at;
