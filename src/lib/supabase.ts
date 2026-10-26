@@ -15,7 +15,7 @@ const disallowedSharedProject = 'ovfygxeqgpjezdhbidmo';
 if (!url || !key) {
   throw new Error('ARF One School: konfigurasi Supabase khusus aplikasi belum lengkap. Tetapkan VITE_SUPABASE_URL dan VITE_SUPABASE_PUBLISHABLE_KEY dari project tyonogxpoyzzzuxiwpwc di Vercel.');
 }
-if (!projectRef || projectRef !== expectedProjectRef || projectRef === disallowedSharedProject) {
+if (!projectRef || projectRef === disallowedSharedProject || projectRef !== expectedProjectRef) {
   throw new Error('ARF One School: koneksi Supabase tidak sesuai atau masih menuju proyek bersama. Akses diblokir untuk melindungi pemisahan data dan akun.');
 }
 
