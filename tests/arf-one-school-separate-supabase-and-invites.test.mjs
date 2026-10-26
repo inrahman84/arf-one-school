@@ -61,3 +61,14 @@ test('legacy cross-app auto permission from invited documents is disabled in ded
  assert.match(migration,/DROP TRIGGER IF EXISTS on_arf_school_invite_insert/);
  assert.match(migration,/DROP FUNCTION IF EXISTS arf_internal\.activate_arf_school_invitation/);
 });
+
+test('first Super Admin bootstrap is restricted to an existing email-verified dedicated Auth account',()=>{
+ const sql=read('supabase/bootstrap_verified_one_school_admin.sql');
+ assert.match(sql,/email_confirmed_at IS NOT NULL/);
+ assert.match(sql,/lower\(email\)='iswahyudhi\.r@sumbermassarana\.sch\.id'/);
+ assert.match(sql,/IF v_admins <> 0 THEN/);
+ assert.match(sql,/IF v_user_id IS NULL THEN/);
+ assert.match(sql,/on conflict \(user_id\) DO UPDATE/i);
+ assert.doesNotMatch(sql,/insert into auth\.users/i);
+ assert.doesNotMatch(sql,/update auth\.users/i);
+});
