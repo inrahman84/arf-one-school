@@ -5,12 +5,13 @@ const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 
 test('One School rejects missing, mismatched or legacy shared Supabase project config',()=>{
  const src=read('src/lib/supabase.ts');
- assert.match(src,/VITE_ARF_ONE_SCHOOL_SUPABASE_REF/);
+ assert.match(src,/expectedProjectRef = 'tyonogxpoyzzzuxiwpwc'/);
  assert.match(src,/VITE_SUPABASE_PUBLISHABLE_KEY/);
  assert.match(src,/VITE_SUPABASE_URL/);
  assert.match(src,/projectRef !== expectedProjectRef/);
  assert.match(src,/projectRef === disallowedSharedProject/);
  assert.match(src,/ovfygxeqgpjezdhbidmo/);
+ assert.match(read('.env.example'),/VITE_SUPABASE_URL=https:\/\/tyonogxpoyzzzuxiwpwc.supabase.co/);
  assert.doesNotMatch(src,/VITE_SUPABASE_URL \|\| 'https:\/\/ovfygxeqgpjezdhbidmo/);
  const example=read('.env.example');
  assert.doesNotMatch(example,/VITE_SUPABASE_URL=https:\/\/ovfygxeqgpjezdhbidmo/);
@@ -25,6 +26,7 @@ test('Creation sends Supabase invitation email by default or a recovery email fo
  assert.match(server,/redirectTo:SITE_URL\+'\/\?setup_password=1'/);
  assert.match(server,/emailSent:true/);
  assert.match(server,/ref!==EXPECTED_PROJECT_REF\|\|ref===SHARED_PROJECT_REF/);
+ assert.match(server,/EXPECTED_PROJECT_REF='tyonogxpoyzzzuxiwpwc'/);
  assert.match(ui,/setDeliveryMode\('INVITE'\)/);
  assert.match(ui,/Simpan Pengguna Baru/);
  assert.doesNotMatch(ui,/Simpan &amp; Otorisasi Pengguna/);
