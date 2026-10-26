@@ -1,3 +1,4 @@
+import {spawnSync as nodeSpawnSync} from 'node:child_process';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -47,3 +48,16 @@ test('docs explicitly block migration before backup and production cutover',()=>
  assert.match(guide,/131/);
  assert.match(guide,/0 aktif/);
 });
+
+// Run syntax check on the script without connecting to Supabase or reading secrets.
+test('stage2 script passes bash syntax check and guards the target project identity',()=>{
+ const {spawnSync}=requireBuiltinSpawn();
+ const result=spawnSync('bash',['-n',new URL('../scripts/arf_stage2_encrypted_transfer.sh',import.meta.url).pathname],{encoding:'utf8'});
+ assert.equal(result.status,0,result.stderr);
+ const source=read('scripts/arf_stage2_encrypted_transfer.sh');
+ assert.match(source,/arf_migration\.project_identity/);
+ assert.match(source,/source_manifest/);
+ assert.match(source,/target_manifest/);
+ assert.match(source,/CHECKSUM PASS/);
+});
+function requireBuiltinSpawn(){return {spawnSync:nodeSpawnSync};}
