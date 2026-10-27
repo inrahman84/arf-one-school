@@ -78,7 +78,7 @@ export const studentsService={
    void auditService.log('RESTORE_STUDENT','StudentRecord',studentId,schoolId,
      'Arsip peserta didik dipulihkan ke daftar aktif').catch(()=>{});
  },
- /** Only the dedicated server-side SECURITY DEFINER RPC may perform deletion.
+ /** Only the dedicated server-side RLS-restricted RPC may perform deletion.
   * It independently validates the caller's ACTIVE SUPER_ADMIN membership,
   * archived_at, school scope, and deletes personal details/movement atomically. */
  async permanentlyDeleteArchivedStudent(schoolId:string,studentId:string):Promise<void>{
