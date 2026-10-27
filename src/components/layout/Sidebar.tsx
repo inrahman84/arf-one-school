@@ -14,6 +14,7 @@ import {
   Sparkles,
   ClipboardCheck,
   History,
+  Archive,
   CalendarDays,
   X
 } from 'lucide-react';
@@ -25,6 +26,7 @@ export type NavItemKey =
   | 'enrollment'
   | 'hr'
   | 'students'
+  | 'studentArchive'
   | 'assets'
   | 'facilities'
   | 'import'
@@ -94,6 +96,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
           key: 'students' as NavItemKey,
           label: 'Data Peserta Didik',
           icon: Users,
+          visible: isFoundationManager || ['REGIONAL_LEAD', 'SCHOOL_PRINCIPAL', 'SCHOOL_OPERATOR'].includes(effectiveRole)
+        },
+        {
+          key: 'studentArchive' as NavItemKey,
+          label: 'Arsip Peserta Didik',
+          icon: Archive,
           visible: isFoundationManager || ['REGIONAL_LEAD', 'SCHOOL_PRINCIPAL', 'SCHOOL_OPERATOR'].includes(effectiveRole)
         },
         {

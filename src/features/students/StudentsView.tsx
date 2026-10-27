@@ -1,5 +1,5 @@
 import React, {useEffect,useMemo,useState} from 'react';
-import {Upload,Users,Link2,ArrowRightLeft,RefreshCw,X,FileSpreadsheet,Trash2} from 'lucide-react';
+import {Upload,Users,Link2,ArrowRightLeft,RefreshCw,X,FileSpreadsheet,Archive} from 'lucide-react';
 import {ConfirmModal} from '../../components/ui/ConfirmModal';
 import {School,ClassroomEnrollment,StudentRecord,StudentMovement,Semester} from '../../types';
 import {useAuth} from '../../context/AuthContext';
@@ -13,8 +13,9 @@ import {StudentPeriodCopy} from './StudentPeriodCopy';
 interface Props{
  schools:School[];classes:ClassroomEnrollment[];students:StudentRecord[];
  movements:StudentMovement[];initialSchoolId?:string|null;onRefresh:()=>Promise<void>|void;
+ onManageArchive:(schoolId:string)=>void;
 }
-export const StudentsView:React.FC<Props>=({schools,classes,students,movements,initialSchoolId,onRefresh})=>{
+export const StudentsView:React.FC<Props>=({schools,classes,students,movements,initialSchoolId,onRefresh,onManageArchive})=>{
  const {hasSchoolAccess,effectiveRole}=useAuth();
  const canManagePrivate=['SUPER_ADMIN','SCHOOL_PRINCIPAL','SCHOOL_OPERATOR'].includes(effectiveRole);
  const {activeAcademicYear,savedAcademicYears}=useAcademicYears();
@@ -58,7 +59,7 @@ export const StudentsView:React.FC<Props>=({schools,classes,students,movements,i
    setArchiveBusy(true);setArchiveError(null);
    try{
      await studentsService.archiveStudent(studentToArchive.school_id,studentToArchive.student_id);
-     setNotice('Data peserta didik diarsipkan. Riwayat mutasi dan data pribadi tetap tersimpan sesuai kebijakan retensi.');
+     setNotice('Peserta didik sudah masuk Arsip Peserta Didik. Gunakan menu tersebut untuk memulihkan atau menghapus permanen (khusus Super Admin).');
      setStudentToArchive(null);
      await onRefresh();
    }catch(err){setArchiveError(err instanceof Error?err.message:'Gagal mengarsipkan peserta didik.');}
@@ -143,8 +144,14 @@ export const StudentsView:React.FC<Props>=({schools,classes,students,movements,i
  const input='w-full rounded-lg border border-gray-300 bg-white p-2.5 text-xs';
  const movementsHere=movements.filter(m=>m.school_id===schoolId&&m.academic_year===year&&m.semester===semester);
  return <div className="space-y-5">
-   <div><h2 className="text-xl font-bold text-[#073b2d]">Data Peserta Didik</h2>
-     <p className="text-sm text-gray-600">Sumber Daya — Register peserta didik Dapodik, pemetaan rombel dan mutasi terverifikasi.</p></div>
+   <div className="flex flex-wrap items-start justify-between gap-3">
+     <div><h2 className="text-xl font-bold text-[#073b2d]">Data Peserta Didik</h2>
+       <p className="text-sm text-gray-600">Sumber Daya — Register peserta didik Dapodik, pemetaan rombel dan mutasi terverifikasi.</p></div>
+     <button type="button" onClick={()=>onManageArchive(schoolId)}
+       className="inline-flex items-center gap-2 rounded-lg border border-[#073b2d] bg-white px-4 py-2 text-xs font-semibold text-[#073b2d]">
+       <Archive size={15}/> Buka Arsip Peserta Didik
+     </button>
+   </div>
    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-xl border bg-white p-4">
      <label className="text-xs font-semibold">Sekolah<select className={input+' mt-1'} value={schoolId}
        onChange={e=>{setSchoolId(e.target.value);setPreview(null);setMapping({});setShowStudentForm(false);setEditingStudent(null);}}>
@@ -232,9 +239,9 @@ export const StudentsView:React.FC<Props>=({schools,classes,students,movements,i
              </button>
              {canManagePrivate && <button type="button"
                onClick={()=>{setStudentToArchive(s);setArchiveError(null)}}
-               title="Hapus dari daftar aktif (arsip)"
+               title="Arsipkan murid dan keluarkan dari daftar aktif"
                className="inline-flex items-center gap-1 rounded-lg border border-rose-200 px-2.5 py-1 text-xs text-rose-700 hover:bg-rose-50">
-               <Trash2 size={12}/> Hapus
+               <Archive size={12}/> Arsipkan
              </button>}
            </div>
          </td>
@@ -259,9 +266,9 @@ export const StudentsView:React.FC<Props>=({schools,classes,students,movements,i
    </section>
    <ConfirmModal
      isOpen={Boolean(studentToArchive)}
-     title="Hapus Peserta Didik dari Daftar Aktif"
+     title="Arsipkan Peserta Didik"
      itemName={studentToArchive?.full_name}
-     message="Peserta didik akan diarsipkan dan tidak lagi dihitung dalam jumlah murid aktif. Data pribadi serta riwayat mutasi tidak dihapus permanen demi keterlacakan."
+     message="Peserta didik akan masuk menu Arsip Peserta Didik, tidak lagi dihitung sebagai murid aktif, dan dapat dipulihkan. Hapus permanen tersedia di menu arsip untuk Super Admin."
      confirmLabel="Arsipkan Peserta Didik"
      cancelLabel="Batal"
      loading={archiveBusy}

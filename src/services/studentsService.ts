@@ -37,6 +37,57 @@ export const studentsService={
    }));
    return groups.flat();
  },
+ /** Archived pupils are deliberately absent from getAll() and all active dashboards. */
+ async getArchivedBySchool(schoolId:string):Promise<StudentRecord[]>{
+   if(!schoolId) return [];
+   const snap=await getDocs(collection(db,'schools',schoolId,'students'));
+   return snap.docs.map(d=>({...d.data(),student_id:d.id}) as StudentRecord)
+     .filter(row=>Boolean(row.archived_at));
+ },
+ async getAllArchived(schoolIds:string[]):Promise<StudentRecord[]>{
+   const groups=await Promise.all(schoolIds.map(sid=>this.getArchivedBySchool(sid)));
+   return groups.flat();
+ },
+ /** Restore one archived period record. Reconnect to old class only if the
+  * class still exists in the same school, academic year and semester. */
+ async restoreArchivedStudent(schoolId:string,studentId:string):Promise<void>{
+   if(!schoolId||!studentId)throw new Error('Sekolah dan peserta didik wajib dipilih.');
+   const ref=doc(db,'schools',schoolId,'students',studentId);
+   const snap=await getDoc(ref);
+   if(!snap.exists())throw new Error('Arsip peserta didik tidak ditemukan.');
+   const current=snap.data() as StudentRecord;
+   if(current.school_id!==schoolId||current.student_id!==studentId)throw new Error('Identitas arsip dan sekolah tidak sesuai.');
+   if(!current.archived_at)throw new Error('Peserta didik sudah berada dalam daftar aktif.');
+   const previousClassId=current.archived_class_id||'';
+   let restoredClass:ClassroomEnrollment|null=null;
+   if(previousClassId){
+     const oldClass=await getDoc(doc(db,'schools',schoolId,'classes',previousClassId));
+     if(oldClass.exists()){
+       const cls=oldClass.data() as ClassroomEnrollment;
+       if(cls.school_id===schoolId&&cls.academic_year===current.academic_year&&cls.semester===current.semester)
+         restoredClass=cls;
+     }
+   }
+   const {archived_at,archived_class_id,archived_class_name,archived_grade_level,...rest}=current;
+   await setDoc(ref,{...rest,
+     class_id:restoredClass?.class_id||'',
+     class_name:restoredClass?.class_name||'',
+     grade_level:restoredClass?.grade_level||'',
+     updated_at:new Date().toISOString()
+   });
+   void auditService.log('RESTORE_STUDENT','StudentRecord',studentId,schoolId,
+     'Arsip peserta didik dipulihkan ke daftar aktif').catch(()=>{});
+ },
+ /** Only the dedicated server-side RLS-restricted RPC may perform deletion.
+  * It independently validates the caller's ACTIVE SUPER_ADMIN membership,
+  * archived_at, school scope, and deletes personal details/movement atomically. */
+ async permanentlyDeleteArchivedStudent(schoolId:string,studentId:string):Promise<void>{
+   if(!schoolId||!studentId)throw new Error('Sekolah dan peserta didik wajib dipilih.');
+   const {error}=await supabase.rpc('arf_purge_archived_student',{
+     p_school_id:schoolId,p_student_id:studentId
+   });
+   if(error)throw new Error('Hapus permanen ditolak: '+error.message);
+ },
  /** Upsert students in modest batches, preserving class assignments when source label is unchanged.
   * All writes go through existing RLS-controlled, school-scoped Supabase document rows. */
  async importStudents(schoolId:string,records:StudentRecord[],onProgress?:(n:number)=>void):Promise<number>{

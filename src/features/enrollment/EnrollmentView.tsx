@@ -8,7 +8,8 @@ import {
   AlertTriangle,
   CheckCircle,
   Settings2,
-  RefreshCw
+  RefreshCw,
+  Archive
 } from 'lucide-react';
 import { ClassroomEnrollment, School, Staff, Semester, StudentRecord, StudentMovement } from '../../types';
 import { movementCounts } from '../../services/studentsService';
@@ -29,6 +30,7 @@ interface EnrollmentViewProps {
   onRefresh: () => void;
   onManageAcademicYears: () => void;
   onManageStudents: (schoolId: string) => void;
+  onManageStudentArchive: (schoolId: string) => void;
 }
 
 export const EnrollmentView: React.FC<EnrollmentViewProps> = ({
@@ -39,7 +41,8 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({
   studentMovements,
   onRefresh,
   onManageAcademicYears,
-  onManageStudents
+  onManageStudents,
+  onManageStudentArchive
 }) => {
   const { hasSchoolAccess, isSuperAdmin } = useAuth();
   const [selectedSchoolId, setSelectedSchoolId] = useState<string>('ALL');
@@ -396,6 +399,12 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({
             disabled={!accessibleSchools.length}
             className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-[#073b2d] px-4 text-xs font-semibold text-[#073b2d] disabled:opacity-50">
             <Users className="h-4 w-4" /> Kelola Data Peserta Didik
+          </button>
+          <button type="button"
+            onClick={()=>onManageStudentArchive(selectedSchoolId==='ALL'?(accessibleSchools[0]?.school_id||''):selectedSchoolId)}
+            disabled={!accessibleSchools.length}
+            className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-[#073b2d] px-4 text-xs font-semibold text-[#073b2d] disabled:opacity-50">
+            <Archive className="h-4 w-4" /> Arsip Peserta Didik
           </button>
           <button type="button" onClick={openAddModal} disabled={!accessibleSchools.length || !masterConnected || !savedAcademicYears.length} className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-[#073b2d] px-4 text-xs font-semibold text-white shadow-sm hover:bg-[#0a4f3d] disabled:cursor-not-allowed disabled:opacity-50">
             <Plus className="h-4 w-4" /> Tambah Rombel Baru
