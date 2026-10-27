@@ -18,12 +18,12 @@ test('Student Add/Edit opens accessible popup and School dropdown from authorize
  assert.match(form,/school_id:selectedSchoolId/);
  assert.match(form,/disabled=\{Boolean\(existing\)\}/);
 });
-test('List row offers Edit and Hapus, deletion requires archive confirmation and preserves records',()=>{
+test('List row offers Edit and Arsipkan, soft archive confirmation preserves records',()=>{
  const view=src('src/features/students/StudentsView.tsx');
  const service=src('src/services/studentsService.ts');
  const types=src('src/types/index.ts');
  assert.match(view,/setEditingStudent\(s\)/);
- assert.match(view,/Hapus\s*<\/button>/);
+ assert.match(view,/Arsipkan\s*<\/button>/);
  assert.match(view,/Arsipkan Peserta Didik/);
  assert.match(view,/studentsService\.archiveStudent/);
  assert.match(service,/async archiveStudent\(schoolId:string,studentId:string\)/);
