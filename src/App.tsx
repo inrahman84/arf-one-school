@@ -15,6 +15,7 @@ import { SchoolDetailView } from './features/schools/SchoolDetailView';
 import { EnrollmentView } from './features/enrollment/EnrollmentView';
 import { HRView } from './features/hr/HRView';
 import { StudentsView } from './features/students/StudentsView';
+import { StudentArchiveView } from './features/students/StudentArchiveView';
 import { AssetsView } from './features/assets/AssetsView';
 import { FacilitiesView } from './features/facilities/FacilitiesView';
 import { DataImportView } from './features/imports/DataImportView';
@@ -205,6 +206,10 @@ const MainAppContent: React.FC = () => {
       title: 'Guru & Tenaga Kependidikan (PTK)',
       subtitle: 'Data kualifikasi, sertifikasi pendidik, dan beban mengajar mingguan'
     },
+    studentArchive: {
+      title: 'Arsip Peserta Didik',
+      subtitle: 'Kelola arsip murid, pemulihan ke daftar aktif, dan penghapusan permanen terbatas'
+    },
     assets: {
       title: 'Inventaris Sarana & Aset Sekolah',
       subtitle: 'Pencatatan inventaris barang, sumber pendanaan (BOS/ARF), dan kondisi fisik'
@@ -335,12 +340,19 @@ const MainAppContent: React.FC = () => {
               onRefresh={loadAllData}
               onManageAcademicYears={() => setActiveTab('academicYears')}
               onManageStudents={(schoolId)=>{setSelectedSchoolId(schoolId);setActiveTab('students');}}
+              onManageStudentArchive={(schoolId)=>{setSelectedSchoolId(schoolId);setActiveTab('studentArchive');}}
             />
           )}
 
           {activeTab === 'students' && (
             <StudentsView schools={schools} classes={classes} students={students}
-              movements={studentMovements} initialSchoolId={selectedSchoolId} onRefresh={loadAllData} />
+              movements={studentMovements} initialSchoolId={selectedSchoolId} onRefresh={loadAllData}
+              onManageArchive={(schoolId)=>{setSelectedSchoolId(schoolId);setActiveTab('studentArchive');}} />
+          )}
+
+          {activeTab === 'studentArchive' && (
+            <StudentArchiveView schools={schools} initialSchoolId={selectedSchoolId} onRefresh={loadAllData}
+              onManageStudents={(schoolId)=>{setSelectedSchoolId(schoolId);setActiveTab('students');}} />
           )}
 
           {activeTab === 'hr' && (
