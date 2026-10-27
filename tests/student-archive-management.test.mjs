@@ -41,7 +41,7 @@ test('service archives remain invisible to active dashboards while restorable ar
 });
 test('permanent deletion requires verified super admin membership, archived record, and atomically cleans private and movement references',()=>{
  const sql=read('supabase/014_archived_student_purge_rpc.sql');
- assert.match(sql,/security definer set search_path = ''/i);
+ assert.match(sql,/security invoker set search_path = ''/i);
  assert.match(sql,/v_actor := \(select auth\.uid\(\)\)/);
  assert.match(sql,/m\.role='SUPER_ADMIN'/);
  assert.match(sql,/m\.status='ACTIVE'/);
