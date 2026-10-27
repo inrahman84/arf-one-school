@@ -1,10 +1,10 @@
 -- ARF One School: irreversible student archive purge, only on dedicated target.
 -- Data from other applications and the shared ARF Workspace project is never touched.
--- This function runs as SECURITY DEFINER because studentPrivate has tighter RLS.
--- Only an authenticated ACTIVE SUPER_ADMIN of this project may invoke it.
+-- SECURITY INVOKER respects existing studentPrivate and school RLS restrictions.
+-- Only an authenticated ACTIVE SUPER_ADMIN may invoke it, checked inside the function.
 create or replace function public.arf_purge_archived_student(p_school_id text,p_student_id text)
 returns void
-language plpgsql security definer set search_path = ''
+language plpgsql security invoker set search_path = ''
 as $function$
 declare
   v_actor uuid;
