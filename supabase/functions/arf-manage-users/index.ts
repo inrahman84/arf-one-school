@@ -7,7 +7,7 @@ const SITE_URL=Deno.env.get('ARF_ONE_SCHOOL_SITE_URL')||'https://arf-one-school.
 const SHARED_PROJECT_REF='ovfygxeqgpjezdhbidmo';
 const allowedRoles=new Set([
  'SUPER_ADMIN','FOUNDATION_MANAGER','REGIONAL_LEAD','SCHOOL_PRINCIPAL',
- 'SCHOOL_OPERATOR','HR_OFFICER','ASSET_OFFICER'
+ 'SCHOOL_OPERATOR','HR_OFFICER','ASSET_OFFICER','SCHOOL_TREASURER','ARF_HEAD_TU'
 ]);
 const allowedStatuses=new Set(['ACTIVE','INVITED','INACTIVE']);
 const admin=createClient(SUPABASE_URL,SERVICE_KEY,{
@@ -129,8 +129,8 @@ Deno.serve(async(req:Request)=>{
      const {error}=await admin.from('arf_school_members').upsert({
        user_id:target.id,email,
        display_name:displayName,position,role,
-       assigned_schools:role==='SUPER_ADMIN'||role==='FOUNDATION_MANAGER'?[]:schoolIds,
-       assigned_regions:role==='SUPER_ADMIN'||role==='FOUNDATION_MANAGER'?[]:regionIds,
+       assigned_schools:['SUPER_ADMIN','FOUNDATION_MANAGER','ARF_HEAD_TU'].includes(role)?[]:schoolIds,
+       assigned_regions:['SUPER_ADMIN','FOUNDATION_MANAGER','ARF_HEAD_TU'].includes(role)?[]:regionIds,
        status:'ACTIVE',deleted_at:null,updated_at:new Date().toISOString()
      },{onConflict:'user_id'});
      if(error){
@@ -196,8 +196,8 @@ Deno.serve(async(req:Request)=>{
        throw failure('Super Admin aktif terakhir tidak boleh dinonaktifkan.');
      const {error}=await admin.from('arf_school_members').update({
        display_name:displayName,position,role,status,
-       assigned_schools:['SUPER_ADMIN','FOUNDATION_MANAGER'].includes(role)?[]:assignedSchools,
-       assigned_regions:['SUPER_ADMIN','FOUNDATION_MANAGER'].includes(role)?[]:assignedRegions,
+       assigned_schools:['SUPER_ADMIN','FOUNDATION_MANAGER','ARF_HEAD_TU'].includes(role)?[]:assignedSchools,
+       assigned_regions:['SUPER_ADMIN','FOUNDATION_MANAGER','ARF_HEAD_TU'].includes(role)?[]:assignedRegions,
        updated_at:new Date().toISOString()
      }).eq('user_id',userId).is('deleted_at',null);
      if(error)throw failure('Gagal memperbarui otorisasi pengguna: '+error.message,500);
