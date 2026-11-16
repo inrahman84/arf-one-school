@@ -283,7 +283,6 @@ export const PettyCashView:React.FC<{schools:School[]}>=({schools})=>{
      <div className="overflow-y-auto min-h-0">
       {error&&<p role="alert" className="m-4 mb-0 rounded-lg bg-red-50 p-3 text-xs text-red-800">{error}</p>}
     <form id="cash-bku-add-form" className="p-4 sm:p-6 space-y-3" onSubmit={saveTransaction}>
-    <h3 className="font-semibold">Tambah Transaksi Buku Kas Umum</h3>
     {userProfile?.role==='SUPER_ADMIN'&&<p className="text-xs text-amber-800 bg-amber-50 rounded-lg p-2">Mode administrator: catatan baru akan tersimpan sebagai transaksi nyata dan dapat diaudit. Gunakan akun Bendahara untuk operasional rutin.</p>}
     <div className="grid sm:grid-cols-3 gap-3">
      <label className="text-xs">Tanggal Transaksi<input type="date" required max={wibToday()} className={cls}
@@ -302,7 +301,6 @@ export const PettyCashView:React.FC<{schools:School[]}>=({schools})=>{
     <p className="text-xs text-gray-600">Pilih beberapa foto sekaligus, beri nama masing-masing, dan periksa sebelum menyimpan. Penghapusan memerlukan alasan dan jejak audit; transaksi yang sudah masuk opname atau LPJ tidak dapat dihapus.</p>
     <label className="block text-xs">Keterangan<textarea className={cls} value={note}
      onChange={e=>setNote(e.target.value)}/></label>
-    <button className={primary} type="submit" disabled={busy||!itemPhotos.length||!receiptPhotos.length}>Simpan BKU &amp; Bukti</button>
     </form>
      </div>
      <footer className="flex justify-end gap-2 px-4 sm:px-6 py-3 border-t shrink-0">
