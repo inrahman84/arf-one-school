@@ -180,28 +180,15 @@ export const PettyCashView:React.FC<{schools:School[]}>=({schools})=>{
   {!school&&<p className="text-sm">Pilih sekolah yang berwenang diakses.</p>}
   {school&&tab==='BKU'&&<div className="space-y-4">
    {!isTreasurer&&<p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">Pencatatan BKU hanya dapat dilakukan oleh akun Bendahara Sekolah yang ditugaskan atau Super Admin asli. Simulasi peran di header tidak mengubah izin Supabase.</p>}
-   {isTreasurer&&<form className="p-4 border bg-white rounded-xl space-y-3" onSubmit={saveTransaction}>
-    <h3 className="font-semibold">Tambah Transaksi Buku Kas Umum</h3>
-    {userProfile?.role==='SUPER_ADMIN'&&<p className="text-xs text-amber-800 bg-amber-50 rounded-lg p-2">Mode administrator: catatan baru akan tersimpan sebagai transaksi nyata dan dapat diaudit. Gunakan akun Bendahara untuk operasional rutin.</p>}
-    <div className="grid sm:grid-cols-3 gap-3">
-     <label className="text-xs">Tanggal Transaksi<input type="date" required max={wibToday()} className={cls}
-      value={date} onChange={e=>setDate(e.target.value)}/></label>
-     <label className="text-xs">Jenis Transaksi<select className={cls} value={type}
-      onChange={e=>setType(e.target.value as CashDirection)}><option value="OUT">Pengeluaran (Kredit)</option>
-      <option value="IN">Penerimaan (Debet)</option></select></label>
-     <RupiahField label="Jumlah Transaksi" required value={amount} onChange={setAmount}/>
-    </div>
-    <label className="block text-xs">Uraian / Keterangan Transaksi<input required minLength={3}
-     className={cls} value={description} onChange={e=>setDescription(e.target.value)}/></label>
-    <div className="grid lg:grid-cols-2 gap-3 items-start min-w-0">
-     <CashPhotoPicker title="Foto Item / Kegiatan" photos={itemPhotos} onChange={setItemPhotos} onError={setError}/>
-     <CashPhotoPicker title="Foto Kuitansi / Nota" photos={receiptPhotos} onChange={setReceiptPhotos} onError={setError}/>
-    </div>
-    <p className="text-xs text-gray-600">Pilih beberapa foto sekaligus, beri nama masing-masing, dan periksa sebelum menyimpan. Transaksi yang berhasil disimpan memiliki riwayat yang tidak dapat dihapus.</p>
-    <label className="block text-xs">Keterangan<textarea className={cls} value={note}
-     onChange={e=>setNote(e.target.value)}/></label>
-    <button className={primary} type="submit" disabled={busy||!itemPhotos.length||!receiptPhotos.length}>Simpan BKU &amp; Bukti</button>
-   </form>}
+   {isTreasurer&&<div className="flex items-center justify-between flex-wrap gap-2">
+    <button type="button" className={primary+' flex items-center gap-2'} disabled={busy}
+      onClick={()=>{setError('');setShowAddModal(true);}}>
+      <Plus size={17}/>Tambah Transaksi
+    </button>
+    <button type="button" className={secondary+' flex items-center gap-1'} onClick={()=>setShowVoidHistory(v=>!v)}>
+      <History size={16}/>{showVoidHistory?'Tutup Riwayat Hapus':'Riwayat Hapus ('+voidHistory.length+')'}
+    </button>
+   </div>}
    <section className="bg-white border rounded-xl p-3 sm:p-4 min-w-0">
     <h3 className="font-semibold mb-3 text-[#073b2d]">BKU {school.school_name}</h3>
     <p className="text-xs text-gray-500 mb-3">Pada ponsel dan tablet, setiap transaksi disusun menjadi kartu agar nominal dan bukti mudah dibaca. Pada desktop, gunakan tampilan tabel yang dapat digulir mendatar apabila diperlukan.</p>
@@ -260,6 +247,83 @@ export const PettyCashView:React.FC<{schools:School[]}>=({schools})=>{
     {transactions.length===0&&<p className="py-6 text-center text-xs text-gray-500">Belum ada transaksi BKU pada sekolah ini.</p>}
     <p className="text-sm font-semibold mt-4 rounded-lg bg-[#f6f3ec] p-3">Saldo Akhir BKU: {money(ledgerBalance(transactions,'9999-12-31'))}</p>
    </section>
+   {isTreasurer&&showVoidHistory&&<section className="rounded-xl border border-gray-200 bg-white p-4 space-y-2">
+    <h3 className="font-semibold text-[#073b2d]">Riwayat Penghapusan BKU (Audit)</h3>
+    {voidHistory.length===0?<p className="text-xs text-gray-500">Belum ada transaksi yang dihapus.</p>:
+     voidHistory.map(v=><article key={v.transaction_id} className="rounded-lg border p-3 text-xs space-y-1">
+      <p className="font-semibold">{formatDate(v.transaction_snapshot.transaction_date)} — {v.transaction_snapshot.description}</p>
+      <p>Nominal: {money(v.transaction_snapshot.amount)}</p>
+      <p>Alasan: {v.reason}</p>
+      <p className="text-gray-500">Dihapus: {new Date(v.voided_at).toLocaleString('id-ID',{timeZone:'Asia/Jakarta'})} WIB · Akun: {v.voided_by}</p>
+     </article>)}
+   </section>}
+   {showAddModal&&isTreasurer&&<div role="presentation" className="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 p-2 sm:p-4"
+     onMouseDown={e=>{if(e.target===e.currentTarget&&!busy)setShowAddModal(false);}}>
+    <section role="dialog" aria-modal="true" aria-labelledby="bku-add-title"
+      className="flex flex-col w-full max-w-4xl max-h-[94vh] rounded-2xl bg-white shadow-2xl overflow-hidden">
+     <header className="flex justify-between items-center gap-3 px-4 sm:px-6 py-4 border-b shrink-0">
+      <div><h3 id="bku-add-title" className="font-bold text-[#073b2d]">Tambah Transaksi Buku Kas Umum</h3>
+       <p className="text-xs text-gray-500">{school.school_name}</p></div>
+      <button type="button" disabled={busy} aria-label="Tutup formulir"
+       className="rounded-lg border p-2 disabled:opacity-40" onClick={()=>setShowAddModal(false)}><X size={18}/></button>
+     </header>
+     <div className="overflow-y-auto min-h-0">
+      {error&&<p role="alert" className="m-4 mb-0 rounded-lg bg-red-50 p-3 text-xs text-red-800">{error}</p>}
+    <form id="cash-bku-add-form" className="p-4 sm:p-6 space-y-3" onSubmit={saveTransaction}>
+    <h3 className="font-semibold">Tambah Transaksi Buku Kas Umum</h3>
+    {userProfile?.role==='SUPER_ADMIN'&&<p className="text-xs text-amber-800 bg-amber-50 rounded-lg p-2">Mode administrator: catatan baru akan tersimpan sebagai transaksi nyata dan dapat diaudit. Gunakan akun Bendahara untuk operasional rutin.</p>}
+    <div className="grid sm:grid-cols-3 gap-3">
+     <label className="text-xs">Tanggal Transaksi<input type="date" required max={wibToday()} className={cls}
+      value={date} onChange={e=>setDate(e.target.value)}/></label>
+     <label className="text-xs">Jenis Transaksi<select className={cls} value={type}
+      onChange={e=>setType(e.target.value as CashDirection)}><option value="OUT">Pengeluaran (Kredit)</option>
+      <option value="IN">Penerimaan (Debet)</option></select></label>
+     <RupiahField label="Jumlah Transaksi" required value={amount} onChange={setAmount}/>
+    </div>
+    <label className="block text-xs">Uraian / Keterangan Transaksi<input required minLength={3}
+     className={cls} value={description} onChange={e=>setDescription(e.target.value)}/></label>
+    <div className="grid lg:grid-cols-2 gap-3 items-start min-w-0">
+     <CashPhotoPicker title="Foto Item / Kegiatan" photos={itemPhotos} onChange={setItemPhotos} onError={setError}/>
+     <CashPhotoPicker title="Foto Kuitansi / Nota" photos={receiptPhotos} onChange={setReceiptPhotos} onError={setError}/>
+    </div>
+    <p className="text-xs text-gray-600">Pilih beberapa foto sekaligus, beri nama masing-masing, dan periksa sebelum menyimpan. Penghapusan memerlukan alasan dan jejak audit; transaksi yang sudah masuk opname atau LPJ tidak dapat dihapus.</p>
+    <label className="block text-xs">Keterangan<textarea className={cls} value={note}
+     onChange={e=>setNote(e.target.value)}/></label>
+    <button className={primary} type="submit" disabled={busy||!itemPhotos.length||!receiptPhotos.length}>Simpan BKU &amp; Bukti</button>
+    </form>
+     </div>
+     <footer className="flex justify-end gap-2 px-4 sm:px-6 py-3 border-t shrink-0">
+      <button type="button" className={secondary} disabled={busy} onClick={()=>setShowAddModal(false)}>Batal</button>
+      <button type="submit" form="cash-bku-add-form" className={primary} disabled={busy||!itemPhotos.length||!receiptPhotos.length}>
+       {busy?'Menyimpan...':'Simpan Transaksi'}
+      </button>
+     </footer>
+    </section>
+   </div>}
+   {deleteTarget&&isTreasurer&&<div role="presentation" className="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 p-3"
+     onMouseDown={e=>{if(e.target===e.currentTarget&&!busy){setDeleteTarget(null);setDeleteReason('');}}}>
+    <section role="alertdialog" aria-modal="true" aria-labelledby="bku-delete-title" aria-describedby="bku-delete-description"
+      className="w-full max-w-md rounded-2xl bg-white p-5 sm:p-6 shadow-2xl space-y-4">
+     <h3 id="bku-delete-title" className="font-bold text-red-800">Hapus Transaksi BKU?</h3>
+     <p id="bku-delete-description" className="text-sm text-gray-700">Transaksi di bawah akan dikeluarkan dari perhitungan saldo BKU aktif. Riwayat dan foto bukti tetap disimpan sebagai arsip audit.</p>
+     <div className="rounded-lg bg-gray-50 p-3 text-sm space-y-1">
+      <p>{formatDate(deleteTarget.transaction_date)}</p><p className="font-semibold break-words">{deleteTarget.description}</p>
+      <p className="font-bold">{money(deleteTarget.amount)}</p>
+     </div>
+     <label className="block text-xs font-semibold">Alasan penghapusan (wajib, minimal 10 karakter)
+      <textarea value={deleteReason} maxLength={500} minLength={10} required rows={3}
+       onChange={e=>setDeleteReason(e.target.value)} placeholder="Contoh: Duplikasi pencatatan transaksi tanggal ..."
+       className={cls+' mt-2'}/>
+     </label>
+     {error&&<p className="text-xs text-red-700" role="alert">{error}</p>}
+     <div className="flex justify-end flex-wrap gap-2">
+      <button className={secondary} type="button" disabled={busy} onClick={()=>{setDeleteTarget(null);setDeleteReason('');}}>Batal</button>
+      <button className="rounded-lg bg-red-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40" type="button"
+       disabled={busy||deleteReason.trim().length<10}
+       onClick={confirmDelete}>{busy?'Memproses...':'Ya, Hapus Transaksi'}</button>
+     </div>
+    </section>
+   </div>}
   </div>}
   {school&&tab==='WEEKLY'&&<div className="space-y-4">
    <section className="bg-white p-4 border rounded-xl space-y-4">
