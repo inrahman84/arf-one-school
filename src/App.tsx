@@ -18,7 +18,6 @@ import { StudentsView } from './features/students/StudentsView';
 import { StudentArchiveView } from './features/students/StudentArchiveView';
 import { AssetsView } from './features/assets/AssetsView';
 import { FacilitiesView } from './features/facilities/FacilitiesView';
-import { DataImportView } from './features/imports/DataImportView';
 import { VerificationView } from './features/verification/VerificationView';
 import { ReportsView } from './features/reports/ReportsView';
 import { UserManagementView } from './features/administration/UserManagementView';
@@ -218,10 +217,6 @@ const MainAppContent: React.FC = () => {
       title: 'Sarana & Prasarana Bangunan',
       subtitle: 'Monitoring kelayakan ruang, toilet, lab, dan kebutuhan renovasi'
     },
-    import: {
-      title: 'Import Data Spreadsheet Excel',
-      subtitle: 'Pengunggahan berkas batch resmi dengan validasi integritas otomatis'
-    },
     verification: {
       title: 'Status Verifikasi & Pengajuan',
       subtitle: 'Persetujuan bertingkat Kepala Sekolah dan Verifikator Yayasan ARF'
@@ -379,15 +374,6 @@ const MainAppContent: React.FC = () => {
               schools={schools}
               facilities={facilities}
               onRefresh={loadAllData}
-            />
-          )}
-
-          {activeTab === 'import' && (
-            <DataImportView
-              schools={schools}
-              regions={regions}
-              onRefresh={loadAllData}
-              onNavigateToTab={(tab) => setActiveTab(tab)}
             />
           )}
 
