@@ -5,6 +5,45 @@ ALTER TABLE public.arf_school_members ADD CONSTRAINT arf_school_members_role_che
  CHECK (role IN ('SUPER_ADMIN','FOUNDATION_MANAGER','REGIONAL_LEAD','SCHOOL_PRINCIPAL',
  'SCHOOL_OPERATOR','HR_OFFICER','ASSET_OFFICER','SCHOOL_TREASURER','ARF_HEAD_TU'));
 
+create or replace function arf_internal.school_doc_allowed(
+ p_collection text,p_school text,p_doc_id text,p_content jsonb,p_write boolean
+) returns boolean language plpgsql stable security definer set search_path = '' as $$
+declare m public.arf_school_members%rowtype;
+        target_school text; related_region text;
+begin
+ if auth.uid() is null then return false; end if;
+ select * into m from public.arf_school_members where user_id=auth.uid() and status='ACTIVE';
+ if not found then return false; end if;
+ if m.deleted_at is not null then return false; end if;
+ -- Treasury has READ-ONLY access to its assigned school identity and regions, not student/admin documents.
+ if m.role='SCHOOL_TREASURER' then
+   return NOT p_write AND (p_collection='regions' OR (p_collection='schools' AND p_doc_id=ANY(m.assigned_schools)));
+ end if;
+ -- Foundation Head TU can read school directory for finance reporting, not write school records.
+ if m.role='ARF_HEAD_TU' then
+   return NOT p_write AND p_collection IN ('regions','schools');
+ end if;
+ if m.role='SUPER_ADMIN' then return true; end if;
+ if p_collection='userInvitations' or p_collection='users' then return false; end if;
+ if p_collection='auditLogs' then return p_write or m.role='FOUNDATION_MANAGER'; end if;
+ if p_collection='academicYears' or p_collection='regions' then
+    return not p_write or m.role='FOUNDATION_MANAGER';
+ end if;
+ if m.role='FOUNDATION_MANAGER' then return true; end if;
+ target_school:=coalesce(p_school,case when p_collection='schools' then p_doc_id end);
+ if target_school is null then return false; end if;
+ if target_school=any(m.assigned_schools) then return true; end if;
+ if m.role='REGIONAL_LEAD' and cardinality(m.assigned_regions)>0 then
+   if p_collection='schools' then related_region:=p_content->>'regional_id';
+   else
+     select content->>'regional_id' into related_region from public.arf_school_documents
+     where path='schools/'||target_school;
+   end if;
+   return related_region=any(m.assigned_regions);
+ end if;
+ return false;
+end;
+$$;
 CREATE OR REPLACE FUNCTION arf_internal.cash_readable(p_school text)
 RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $$
  SELECT EXISTS(
