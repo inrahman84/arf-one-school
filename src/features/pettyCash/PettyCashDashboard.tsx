@@ -3,6 +3,7 @@ import {Banknote,CalendarClock,FileCheck2,RefreshCw,ReceiptText,TrendingDown,Tre
 import {Bar,BarChart,CartesianGrid,Cell,Legend,Pie,PieChart,ResponsiveContainer,Tooltip,XAxis,YAxis} from 'recharts';
 import {supabase} from '../../lib/supabase';
 import {School} from '../../types';
+import {useAuth} from '../../context/AuthContext';
 import {periodFor,formatDate,money,wibToday} from '../../services/cashService';
 
 type FinancialTransaction={school_id:string;transaction_date:string;amount:number;direction:'IN'|'OUT'};
@@ -50,6 +51,14 @@ const allStatuses:Record<string,string>={
 };
 
 export const PettyCashDashboard:React.FC<{schools:School[]}>=({schools})=>{
+  const {userProfile}=useAuth();
+  const actualRole=userProfile?.role||'';
+  const permittedSchools=useMemo(()=>(
+    ['SUPER_ADMIN','FOUNDATION_MANAGER','ARF_HEAD_TU'].includes(actualRole)
+      ? schools : ['SCHOOL_TREASURER','SCHOOL_PRINCIPAL'].includes(actualRole)
+      ? schools.filter(s=>(userProfile?.assignedSchools||[]).includes(s.school_id))
+      : []
+  ),[schools,actualRole,userProfile?.assignedSchools]);
   const [month,setMonth]=useState(wibToday().slice(0,7));
   const [scope,setScope]=useState('ALL');
   const [refreshKey,setRefreshKey]=useState(0);
@@ -57,7 +66,7 @@ export const PettyCashDashboard:React.FC<{schools:School[]}>=({schools})=>{
   const [loading,setLoading]=useState(false);
   const [error,setError]=useState('');
   const [updatedAt,setUpdatedAt]=useState('');
-  const schoolIds=useMemo(()=>schools.map(s=>s.school_id),[schools]);
+  const schoolIds=useMemo(()=>permittedSchools.map(s=>s.school_id),[permittedSchools]);
   const key=schoolIds.join('|');
   useEffect(()=>{if(scope!=='ALL'&&!schoolIds.includes(scope))setScope('ALL');},[scope,key]);
   useEffect(()=>{
@@ -72,7 +81,7 @@ export const PettyCashDashboard:React.FC<{schools:School[]}>=({schools})=>{
     return()=>{alive=false};
   },[key,refreshKey]);
   const period=useMemo(()=>periodFor(month),[month]);
-  const schoolMap=useMemo(()=>new Map(schools.map(s=>[s.school_id,s.school_name])),[schools]);
+  const schoolMap=useMemo(()=>new Map(permittedSchools.map(s=>[s.school_id,s.school_name])),[permittedSchools]);
   const summary=useMemo(()=>{
     const visible=scope==='ALL'?new Set(schoolIds):new Set([scope]);
     const transactions=records.transactions.filter(t=>visible.has(t.school_id));
@@ -112,9 +121,9 @@ export const PettyCashDashboard:React.FC<{schools:School[]}>=({schools})=>{
             onChange={e=>setMonth(e.target.value)}/></label>
         <label className="text-xs font-semibold">Cakupan sekolah
           <select className="block w-full mt-1 rounded-lg border border-gray-300 p-2 text-sm" value={scope} onChange={e=>setScope(e.target.value)}>
-            {schools.length>1&&<option value="ALL">Seluruh sekolah yang saya akses ({schools.length})</option>}
-            {schools.length===1&&<option value="ALL">{schools[0].school_name}</option>}
-            {schools.map(s=><option key={s.school_id} value={s.school_id}>{s.school_name}</option>)}
+            {permittedSchools.length>1&&<option value="ALL">Seluruh sekolah yang saya akses ({permittedSchools.length})</option>}
+            {permittedSchools.length===1&&<option value="ALL">{permittedSchools[0].school_name}</option>}
+            {permittedSchools.map(s=><option key={s.school_id} value={s.school_id}>{s.school_name}</option>)}
           </select>
         </label>
       </div>
