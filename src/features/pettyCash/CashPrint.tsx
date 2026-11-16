@@ -1,5 +1,5 @@
 import React from 'react';
-import {CashTransaction,CashReport,CashApprovalEvent,CASH_DENOMINATIONS,reportSummary,formatDate,money} from '../../services/cashService';
+import {CashTransaction,CashReport,CashApprovalEvent,CASH_DENOMINATIONS,reportSummary,formatDate,money,transactionAttachments} from '../../services/cashService';
 
 interface Props{
  report:CashReport;schoolName:string;transactions:CashTransaction[];
@@ -15,7 +15,7 @@ function eventFor(events:CashApprovalEvent[],role:string):string{
 }
 export const CashPrint:React.FC<Props>=({report,schoolName,transactions,events,photos,photoLoading,onError})=>{
  const summary=reportSummary(transactions,report.period_start,report.period_end);
- const missing=summary.rows.some(({transaction:t})=>!photos[t.item_photo_path]||!photos[t.receipt_photo_path]);
+ const missing=summary.rows.some(({transaction:t})=>transactionAttachments(t).some(a=>!photos[a.file_path]));
  const print=()=>{
   if(photoLoading||missing){onError('Foto bukti belum tersedia lengkap. Pencetakan ditunda agar lampiran tidak kosong.');return;}
   window.print();
@@ -108,12 +108,14 @@ export const CashPrint:React.FC<Props>=({report,schoolName,transactions,events,p
     {summary.rows.map(({transaction:t},i)=><section className="cash-evidence border-b pb-4 space-y-2" key={t.id}>
      <h3 className="text-xs font-bold">{i+1}. {formatDate(t.transaction_date)} — {t.description} ({money(t.amount)})</h3>
      <div className="cash-photo-pair grid sm:grid-cols-2 gap-3">
-      <figure><figcaption className="text-xs font-semibold">Foto Item / Kegiatan</figcaption>
-       {photos[t.item_photo_path]?<img className="w-full h-48 object-contain border" src={photos[t.item_photo_path]} alt={'Item: '+t.description}/>:
-        <p className="text-xs text-red-700">Foto tidak tersedia</p>}</figure>
-      <figure><figcaption className="text-xs font-semibold">Foto Kuitansi / Nota</figcaption>
-       {photos[t.receipt_photo_path]?<img className="w-full h-48 object-contain border" src={photos[t.receipt_photo_path]} alt={'Nota: '+t.description}/>:
-        <p className="text-xs text-red-700">Foto tidak tersedia</p>}</figure>
+      {transactionAttachments(t).map((a,j)=><figure className="min-w-0 break-inside-avoid" key={a.id}>
+       <figcaption className="text-xs font-semibold mb-2 break-words">
+        {j+1}. {a.kind==='ITEM'?'Foto Item / Kegiatan':'Foto Kuitansi / Nota'} — {a.display_name}
+       </figcaption>
+       {photos[a.file_path]?
+        <img className="w-full h-48 object-contain border" src={photos[a.file_path]} alt={a.display_name}/>:
+        <p className="text-xs text-red-700">Foto belum tersedia: {a.display_name}</p>}
+      </figure>)}
      </div>
     </section>)}
    </article>
