@@ -4,6 +4,8 @@ export type UserRole =
   | 'REGIONAL_LEAD'
   | 'SCHOOL_PRINCIPAL'
   | 'SCHOOL_OPERATOR'
+  | 'SCHOOL_TREASURER'
+  | 'ARF_HEAD_TU'
   | 'HR_OFFICER'
   | 'ASSET_OFFICER';
 
