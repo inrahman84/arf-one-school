@@ -4,7 +4,6 @@ import {
   School,
   Users,
   Building2,
-  FileSpreadsheet,
   BarChart3,
   ShieldCheck,
   MapPin,
@@ -29,7 +28,6 @@ export type NavItemKey =
   | 'studentArchive'
   | 'assets'
   | 'facilities'
-  | 'import'
   | 'verification'
   | 'reports'
   | 'users'
@@ -127,12 +125,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       title: 'DATA & LAPORAN',
       items: [
-        {
-          key: 'import' as NavItemKey,
-          label: 'Import Data Excel',
-          icon: FileSpreadsheet,
-          visible: true
-        },
         {
           key: 'verification' as NavItemKey,
           label: 'Status & Verifikasi',
