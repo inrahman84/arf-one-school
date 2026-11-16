@@ -113,7 +113,7 @@ export const PettyCashDashboard:React.FC<{schools:School[]}>=({schools})=>{
   return <div className="space-y-4">
     <section className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
       <div className="flex flex-wrap gap-3 items-start justify-between">
-        <div><h2 className="text-lg font-extrabold text-[#073b2d]">Executive Dashboard — BKU &amp; Petty Cash</h2>
+        <div><h2 className="text-lg font-extrabold text-[#073b2d]">Laporan BOP Sekolah</h2>
           <p className="text-xs text-gray-500">Infografis berdasarkan transaksi dan laporan yang tersimpan di Supabase; bukan data simulasi.</p></div>
         <button type="button" className="flex gap-2 items-center rounded-lg border border-[#073b2d] px-3 py-2 text-xs font-semibold text-[#073b2d]"
           onClick={()=>setRefreshKey(n=>n+1)}><RefreshCw size={14}/>Perbarui</button>
