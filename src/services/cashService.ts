@@ -109,7 +109,14 @@ export const cashService={
       if(error)throw cashError(error);
       saved=true;
     }catch(error){
-      if(!saved)await imageStorageService.cleanupImages(uploadedPaths);
+      // If the server committed the RPC but the response was lost, do not
+      // remove image files already referenced by the saved transaction.
+      if(!saved){
+        const check=await supabase.from('arf_cash_transactions')
+          .select('id').eq('id',recordId).maybeSingle();
+        if(!check.error&&check.data?.id===recordId)return;
+        await imageStorageService.cleanupImages(uploadedPaths);
+      }
       throw cashError(error);
     }
   },
