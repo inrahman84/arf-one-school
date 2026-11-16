@@ -3,10 +3,11 @@ import {School} from '../../types';
 import {useAuth} from '../../context/AuthContext';
 import {cashService,CASH_DENOMINATIONS,emptyDenominations,periodFor,lastFriday,wibToday,
  money,formatDate,ledgerBalance,reportSummary,totalPhysical,CashTransaction,CashWeeklyCount,CashReport,
- CashApprovalEvent,Denominations,CashDirection,transactionAttachments} from '../../services/cashService';
+ CashApprovalEvent,Denominations,CashDirection,CashVoidRecord,transactionAttachments} from '../../services/cashService';
 import {CashPrint} from './CashPrint';
 import {CashPhotoPicker,SelectedCashPhoto} from './CashPhotoPicker';
 import {RupiahField} from './RupiahField';
+import {Plus,Trash2,X,History} from 'lucide-react';
 
 type Tab='BKU'|'WEEKLY'|'MONTHLY';
 type CountForm={denominations:Denominations;bank:number;damaged:number;stamps:number;unposted:number;notes:string};
@@ -46,6 +47,11 @@ export const PettyCashView:React.FC<{schools:School[]}>=({schools})=>{
  const [weekly,setWeekly]=useState<CashWeeklyCount[]>([]);
  const [reports,setReports]=useState<CashReport[]>([]);
  const [events,setEvents]=useState<CashApprovalEvent[]>([]);
+ const [voidHistory,setVoidHistory]=useState<CashVoidRecord[]>([]);
+ const [showAddModal,setShowAddModal]=useState(false);
+ const [deleteTarget,setDeleteTarget]=useState<CashTransaction|null>(null);
+ const [deleteReason,setDeleteReason]=useState('');
+ const [showVoidHistory,setShowVoidHistory]=useState(false);
  const [busy,setBusy]=useState(false);const [error,setError]=useState('');const [message,setMessage]=useState('');
  const [date,setDate]=useState(wibToday());const [description,setDescription]=useState('');
  const [type,setType]=useState<CashDirection>('OUT');const [amount,setAmount]=useState(0);const [note,setNote]=useState('');
@@ -63,17 +69,43 @@ export const PettyCashView:React.FC<{schools:School[]}>=({schools})=>{
  const refresh=async()=>{
   if(!schoolId)return;
   try{
-   const [t,w,r,e]=await Promise.all([cashService.listTransactions(schoolId),
-    cashService.listWeekly(schoolId),cashService.listReports(schoolId),cashService.listApprovalEvents(schoolId)]);
-   setTransactions(t);setWeekly(w);setReports(r);setEvents(e);
+   const [t,w,r,e,v]=await Promise.all([cashService.listTransactions(schoolId),
+    cashService.listWeekly(schoolId),cashService.listReports(schoolId),
+    cashService.listApprovalEvents(schoolId),cashService.listVoidedTransactions(schoolId)]);
+   setTransactions(t);setWeekly(w);setReports(r);setEvents(e);setVoidHistory(v);
   }catch(e){setError(e instanceof Error?e.message:String(e));}
  };
- useEffect(()=>{setTransactions([]);setWeekly([]);setReports([]);setPreviewId('');void refresh();},[schoolId]);
+ useEffect(()=>{setTransactions([]);setWeekly([]);setReports([]);setVoidHistory([]);setPreviewId('');setShowAddModal(false);setDeleteTarget(null);void refresh();},[schoolId]);
  const act=async(action:()=>Promise<void>,success:string)=>{
   setError('');setMessage('');setBusy(true);
   try{await action();setMessage(success);await refresh();}
   catch(e){setError(e instanceof Error?e.message:String(e));}
   finally{setBusy(false);}
+ };
+ const canDeleteTransaction=(t:CashTransaction)=>
+   !weekly.some(w=>w.week_ending>=t.transaction_date) &&
+   !reports.some(r=>r.period_end>=t.transaction_date);
+ useEffect(()=>{
+  if(!showAddModal&&!deleteTarget)return;
+  const handleEscape=(event:KeyboardEvent)=>{
+   if(event.key==='Escape'&&!busy){
+    setShowAddModal(false);setDeleteTarget(null);setDeleteReason('');
+   }
+  };
+  window.addEventListener('keydown',handleEscape);
+  return ()=>window.removeEventListener('keydown',handleEscape);
+ },[showAddModal,deleteTarget,busy]);
+ const confirmDelete=()=>{
+  const target=deleteTarget;
+  if(!target||busy)return;
+  if(deleteReason.trim().length<10){
+   setError('Alasan penghapusan wajib minimal 10 karakter.');
+   return;
+  }
+  void act(async()=>{
+   await cashService.voidTransaction(target.id,deleteReason);
+   setDeleteTarget(null);setDeleteReason('');
+  },'Transaksi berhasil dihapus dari BKU aktif dan tercatat dalam riwayat audit.');
  };
  const activeReport=reports.find(r=>r.id===previewId);
  useEffect(()=>{
@@ -102,7 +134,7 @@ export const PettyCashView:React.FC<{schools:School[]}>=({schools})=>{
     itemPhotos:itemPhotos.map(({file,name})=>({file,name})),
     receiptPhotos:receiptPhotos.map(({file,name})=>({file,name})),notes:note});
    setDescription('');setAmount(0);setNote('');setItemPhotos([]);setReceiptPhotos([]);
-  },'Transaksi BKU dan kedua foto bukti berhasil disimpan.');
+  },'Transaksi BKU dan seluruh foto bukti berhasil disimpan.');
  };
  const weeklyLedger=ledgerBalance(transactions,friday);
  const weeklyPhysical=totalPhysical(weeklyForm.denominations,weeklyForm.bank,weeklyForm.damaged,weeklyForm.stamps,weeklyForm.unposted);
