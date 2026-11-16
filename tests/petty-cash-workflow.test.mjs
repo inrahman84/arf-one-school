@@ -68,3 +68,31 @@ test('Startup failure from a missing preview Supabase environment does not leave
  assert.match(supabase,/VITE_SUPABASE_URL/);
  assert.match(supabase,/VITE_SUPABASE_PUBLISHABLE_KEY/);
 });
+
+test('Petty Cash dashboard uses actual Supabase tables and scopes rows to authorized schools',()=>{
+ const view=readFileSync(new URL('../src/features/pettyCash/PettyCashDashboard.tsx',import.meta.url),'utf8');
+ const module=readFileSync(new URL('../src/features/pettyCash/PettyCashView.tsx',import.meta.url),'utf8');
+ assert.match(view,/supabase\.from\(table\)/);
+ assert.match(view,/\.in\('school_id',ids\)/);
+ assert.match(view,/arf_cash_transactions/);
+ assert.match(view,/arf_cash_weekly_counts/);
+ assert.match(view,/arf_cash_reports/);
+ assert.match(view,/Executive Dashboard/);
+ assert.match(view,/Saldo BKU akhir periode/);
+ assert.match(view,/Perbandingan pemasukan dan pengeluaran/);
+ assert.match(module,/PettyCashDashboard/);
+ assert.match(module,/\['No','Tanggal','Uraian','Debet','Kredit','Saldo','Keterangan','Lampiran'\]/);
+ assert.match(module,/t\.notes\?\.trim\(\)\|\|'-'/);
+});
+
+test('BKU and weekly inserts are protected by actual role rather than role simulation',()=>{
+ const sql=readFileSync(new URL('../supabase/015_petty_cash_workflow.sql',import.meta.url),'utf8');
+ const component=readFileSync(new URL('../src/features/pettyCash/PettyCashView.tsx',import.meta.url),'utf8');
+ assert.match(sql,/m\.role='SUPER_ADMIN' OR/);
+ assert.match(sql,/arf_cash_tx_insert/);
+ assert.match(sql,/arf_cash_week_insert/);
+ assert.match(component,/userProfile\?\.role/);
+ assert.match(component,/Simulasi peran di header tidak mengubah izin Supabase/);
+ assert.match(component,/cashService\.addTransaction/);
+ assert.match(component,/cashService\.submitWeekly/);
+});
