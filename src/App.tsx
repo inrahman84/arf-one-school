@@ -224,7 +224,7 @@ const MainAppContent: React.FC = () => {
       subtitle: 'Persetujuan bertingkat Kepala Sekolah dan Verifikator Yayasan ARF'
     },
     cashDashboard: {
-      title: 'Executive Dashboard BKU & Petty Cash',
+      title: 'Laporan BOP Sekolah',
       subtitle: 'Infografis penerimaan, pengeluaran, saldo, opname, dan status LPJ sekolah'
     },
     pettyCash: {

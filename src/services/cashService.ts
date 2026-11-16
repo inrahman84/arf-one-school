@@ -8,6 +8,12 @@ export interface CashAttachment {
   display_name:string; file_path:string; sort_order:number;
 }
 export interface NamedCashPhoto { file:File; name:string; }
+export interface CashVoidRecord {
+  transaction_id:string; school_id:string; reason:string; voided_by:string;
+  voided_at:string;
+  transaction_snapshot:CashTransaction;
+}
+
 export function transactionAttachments(t:CashTransaction):CashAttachment[] {
   const existing=(t as CashTransaction & {attachments?:CashAttachment[]}).attachments;
   if(existing?.length)return [...existing].sort((a,b)=>a.kind.localeCompare(b.kind)||a.sort_order-b.sort_order);
@@ -55,21 +61,25 @@ function unwrap<T>(data:T[]|null,error:any):T[] {
 }
 export const cashService={
   async listTransactions(schoolId:string):Promise<CashTransaction[]>{
-    const [txResult,attachmentResult]=await Promise.all([
+    const [txResult,attachmentResult,voidResult]=await Promise.all([
       supabase.from('arf_cash_transactions').select('*').eq('school_id',schoolId)
         .order('transaction_date',{ascending:true}).order('created_at',{ascending:true}),
       supabase.from('arf_cash_transaction_attachments').select('*').eq('school_id',schoolId)
-        .order('sort_order',{ascending:true})
+        .order('sort_order',{ascending:true}),
+      supabase.from('arf_cash_transaction_voids').select('transaction_id').eq('school_id',schoolId)
     ]);
     const transactions=unwrap<CashTransaction>(txResult.data as CashTransaction[]|null,txResult.error);
     const attachments=unwrap<CashAttachment>(attachmentResult.data as CashAttachment[]|null,attachmentResult.error);
+    const voidRows=unwrap<{transaction_id:string}>(voidResult.data as {transaction_id:string}[]|null,voidResult.error);
+    const voided=new Set(voidRows.map(v=>v.transaction_id));
     const byTransaction=new Map<string,CashAttachment[]>();
     for(const attachment of attachments){
       const list=byTransaction.get(attachment.transaction_id)||[];
       list.push(attachment);
       byTransaction.set(attachment.transaction_id,list);
     }
-    return transactions.map(t=>({...t,attachments:byTransaction.get(t.id)||[]}));
+    return transactions.filter(t=>!voided.has(t.id))
+      .map(t=>({...t,attachments:byTransaction.get(t.id)||[]}));
   },
   async addTransaction(input:{
     schoolId:string;date:string;description:string;direction:CashDirection;amount:number;
@@ -119,6 +129,19 @@ export const cashService={
       }
       throw cashError(error);
     }
+  },
+  async listVoidedTransactions(schoolId:string):Promise<CashVoidRecord[]>{
+    const {data,error}=await supabase.from('arf_cash_transaction_voids')
+      .select('transaction_id,school_id,reason,voided_by,voided_at,transaction_snapshot')
+      .eq('school_id',schoolId).order('voided_at',{ascending:false});
+    return unwrap<CashVoidRecord>(data as CashVoidRecord[]|null,error);
+  },
+  async voidTransaction(id:string,reason:string):Promise<void>{
+    const {data,error}=await supabase.rpc('arf_cash_void_transaction',{
+      p_transaction_id:id,p_reason:reason.trim()
+    });
+    if(error)throw cashError(error);
+    if(data!==id)throw new Error('Konfirmasi penghapusan BKU tidak sesuai. Muat ulang data.');
   },
   async listWeekly(schoolId:string):Promise<CashWeeklyCount[]>{
     const {data,error}=await supabase.from('arf_cash_weekly_counts').select('*').eq('school_id',schoolId)
