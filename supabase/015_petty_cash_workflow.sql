@@ -58,7 +58,8 @@ CREATE OR REPLACE FUNCTION arf_internal.cash_treasurer(p_school text)
 RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $$
  SELECT EXISTS(SELECT 1 FROM public.arf_school_members m
  WHERE m.user_id=(SELECT auth.uid()) AND m.status='ACTIVE' AND m.deleted_at IS NULL
- AND m.role='SCHOOL_TREASURER' AND p_school=ANY(m.assigned_schools));
+ AND (m.role='SUPER_ADMIN' OR
+   (m.role='SCHOOL_TREASURER' AND p_school=ANY(m.assigned_schools))));
 $$;
 CREATE OR REPLACE FUNCTION arf_internal.cash_role(p_school text, p_role text)
 RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $$
@@ -206,9 +207,9 @@ RETURNS bigint LANGUAGE sql STABLE SECURITY DEFINER SET search_path='' AS $$
  FROM public.arf_cash_transactions WHERE school_id=p_school AND transaction_date<=p_as_of;
 $$;
 REVOKE ALL ON FUNCTION arf_internal.cash_denominations(jsonb),
- arf_internal.cash_ledger(text,date) FROM PUBLIC,anon;
-GRANT EXECUTE ON FUNCTION arf_internal.cash_denominations(jsonb),
- arf_internal.cash_ledger(text,date) TO authenticated;
+ arf_internal.cash_ledger(text,date) FROM PUBLIC,anon,authenticated;
+-- Internal calculations are only invoked by protected server-side triggers.
+-- Never expose a SECURITY DEFINER ledger lookup for arbitrary school IDs.
 
 CREATE OR REPLACE FUNCTION arf_internal.cash_transaction_guard()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
