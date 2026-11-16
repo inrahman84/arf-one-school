@@ -73,7 +73,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         },
         {
           key: 'cashDashboard' as NavItemKey,
-          label: 'Executive Dashboard BKU & Petty Cash',
+          label: 'Laporan BOP Sekolah',
           icon: WalletCards,
           visible: ['SUPER_ADMIN','FOUNDATION_MANAGER','SCHOOL_TREASURER','SCHOOL_PRINCIPAL','ARF_HEAD_TU'].includes(userProfile?.role || '')
         }
