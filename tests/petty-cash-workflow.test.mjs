@@ -56,3 +56,15 @@ test('Legacy spreadsheet uploader removed from menu routing, but exports remain'
  assert.match(menu,/BKU & Petty Cash/);
  assert.match(menu,/Laporan & Ekspor Data/);
 });
+
+test('Startup failure from a missing preview Supabase environment does not leave a white screen',()=>{
+ const main=readFileSync(new URL('../src/main.tsx',import.meta.url),'utf8');
+ const supabase=readFileSync(new URL('../src/lib/supabase.ts',import.meta.url),'utf8');
+ assert.match(main,/root\.render\(<main/);
+ assert.match(main,/import\('\.\/App\.tsx'\)/);
+ assert.match(main,/\.catch\(error=>/);
+ assert.match(main,/LoadFailure/);
+ assert.match(main,/getDerivedStateFromError/);
+ assert.match(supabase,/VITE_SUPABASE_URL/);
+ assert.match(supabase,/VITE_SUPABASE_PUBLISHABLE_KEY/);
+});
