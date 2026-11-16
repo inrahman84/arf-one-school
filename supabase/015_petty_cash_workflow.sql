@@ -179,6 +179,17 @@ BEGIN
  PERFORM pg_advisory_xact_lock(hashtext('arf-cash:'||NEW.school_id));
  IF NOT arf_internal.cash_treasurer(NEW.school_id) THEN RAISE EXCEPTION 'Hanya Bendahara Sekolah yang dapat mencatat BKU'; END IF;
  IF NEW.created_by IS DISTINCT FROM auth.uid() THEN RAISE EXCEPTION 'Identitas pencatat tidak valid'; END IF;
+ IF NEW.item_photo_path NOT LIKE ('schools/'||NEW.school_id||'/petty-cash/'||NEW.id||'/item/%')
+  OR NEW.receipt_photo_path NOT LIKE ('schools/'||NEW.school_id||'/petty-cash/'||NEW.id||'/receipt/%')
+  OR NEW.item_photo_path=NEW.receipt_photo_path THEN
+   RAISE EXCEPTION 'Path bukti foto tidak sesuai identitas transaksi';
+ END IF;
+ IF NOT EXISTS(SELECT 1 FROM storage.objects s WHERE s.bucket_id='arf-one-school'
+    AND s.name=NEW.item_photo_path AND s.owner_id=auth.uid()::text)
+  OR NOT EXISTS(SELECT 1 FROM storage.objects s WHERE s.bucket_id='arf-one-school'
+    AND s.name=NEW.receipt_photo_path AND s.owner_id=auth.uid()::text) THEN
+   RAISE EXCEPTION 'Foto item dan kuitansi harus diunggah dan dimiliki akun Bendahara';
+ END IF;
  IF length(trim(NEW.item_photo_path))=0 OR length(trim(NEW.receipt_photo_path))=0 THEN
   RAISE EXCEPTION 'Foto item dan kuitansi wajib dilampirkan';
  END IF;
@@ -205,8 +216,8 @@ BEGIN
  PERFORM pg_advisory_xact_lock(hashtext('arf-cash:'||NEW.school_id));
  IF NOT arf_internal.cash_treasurer(NEW.school_id) THEN RAISE EXCEPTION 'Hanya Bendahara Sekolah yang dapat melaporkan opname mingguan'; END IF;
  IF extract(isodow from NEW.week_ending)<>5 THEN RAISE EXCEPTION 'Tanggal cut-off harus hari Jumat'; END IF;
- IF NEW.week_ending > (now() AT TIME ZONE 'Asia/Jakarta')::date THEN
-  RAISE EXCEPTION 'Cut-off Jumat yang akan datang belum dapat dilaporkan';
+ IF (now() AT TIME ZONE 'Asia/Jakarta') < (NEW.week_ending::timestamp + interval '17 hours') THEN
+  RAISE EXCEPTION 'Cut-off Jumat belum pukul 17:00 WIB';
  END IF;
  IF NOT NEW.receipts_verified THEN RAISE EXCEPTION 'Verifikasi semua kuitansi wajib dinyatakan selesai'; END IF;
  IF NEW.submitted_by IS DISTINCT FROM auth.uid() THEN RAISE EXCEPTION 'Identitas Bendahara tidak sesuai'; END IF;
@@ -307,9 +318,33 @@ $$;
 REVOKE ALL ON FUNCTION public.arf_cash_transition(uuid,text,text) FROM PUBLIC,anon;
 GRANT EXECUTE ON FUNCTION public.arf_cash_transition(uuid,text,text) TO authenticated;
 
--- Signed-photo viewing for global reviewers (Head TU and Manager), only in petty cash subtree.
+-- Isolate financial evidence from the existing general school-photo policies.
+-- Regular operators may access assets/facility photos, not petty cash receipts.
+DROP POLICY IF EXISTS arf_school_photo_read ON storage.objects;
+CREATE POLICY arf_school_photo_read ON storage.objects FOR SELECT TO authenticated
+ USING(bucket_id='arf-one-school' AND split_part(name,'/',3)<>'petty-cash'
+  AND arf_internal.school_storage_allowed(name,false));
+DROP POLICY IF EXISTS arf_school_photo_insert ON storage.objects;
+CREATE POLICY arf_school_photo_insert ON storage.objects FOR INSERT TO authenticated
+ WITH CHECK(bucket_id='arf-one-school' AND split_part(name,'/',3)<>'petty-cash'
+  AND arf_internal.school_storage_allowed(name,true));
+DROP POLICY IF EXISTS arf_school_photo_delete ON storage.objects;
+CREATE POLICY arf_school_photo_delete ON storage.objects FOR DELETE TO authenticated
+ USING(bucket_id='arf-one-school' AND split_part(name,'/',3)<>'petty-cash'
+  AND arf_internal.school_storage_allowed(name,true));
 CREATE POLICY arf_cash_storage_read ON storage.objects FOR SELECT TO authenticated
- USING(bucket_id='arf-one-school'
-  AND split_part(name,'/',1)='schools'
+ USING(bucket_id='arf-one-school' AND split_part(name,'/',1)='schools'
   AND split_part(name,'/',3)='petty-cash'
   AND arf_internal.cash_readable(split_part(name,'/',2)));
+CREATE POLICY arf_cash_storage_insert ON storage.objects FOR INSERT TO authenticated
+ WITH CHECK(bucket_id='arf-one-school' AND split_part(name,'/',1)='schools'
+  AND split_part(name,'/',3)='petty-cash'
+  AND arf_internal.cash_treasurer(split_part(name,'/',2)));
+-- Permit deleting only one's unlinked, unsubmitted orphan uploads for upload-failure cleanup.
+CREATE POLICY arf_cash_storage_delete_unlinked ON storage.objects FOR DELETE TO authenticated
+ USING(bucket_id='arf-one-school' AND split_part(name,'/',1)='schools'
+  AND split_part(name,'/',3)='petty-cash'
+  AND owner_id=auth.uid()::text
+  AND arf_internal.cash_treasurer(split_part(name,'/',2))
+  AND NOT EXISTS(SELECT 1 FROM public.arf_cash_transactions t
+    WHERE t.item_photo_path=name OR t.receipt_photo_path=name));
