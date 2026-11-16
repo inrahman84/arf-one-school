@@ -84,6 +84,7 @@ CREATE TABLE IF NOT EXISTS public.arf_cash_reports(
  damaged_cash bigint NOT NULL DEFAULT 0 CHECK(damaged_cash>=0),
  stamps_value bigint NOT NULL DEFAULT 0 CHECK(stamps_value>=0),
  unposted_value bigint NOT NULL DEFAULT 0 CHECK(unposted_value>=0),
+ reimbursement_pending bigint NOT NULL DEFAULT 0 CHECK(reimbursement_pending>=0),
  physical_total bigint NOT NULL DEFAULT 0,
  book_balance_at_count bigint NOT NULL DEFAULT 0,
  variance bigint NOT NULL DEFAULT 0,
