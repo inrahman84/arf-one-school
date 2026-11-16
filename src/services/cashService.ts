@@ -23,8 +23,19 @@ export interface CashApprovalEvent {
   from_status:string;to_status:string;actor_id:string;actor_role:string;actor_name:string;
   comment:string;occurred_at:string;
 }
+export function cashError(error:unknown):Error {
+  if(error instanceof Error)return error;
+  const e=error as {code?:string;message?:string;details?:string;status?:number}|null;
+  const code=e?.code||'';
+  if(['42P01','PGRST205'].includes(code))return new Error('Tabel BKU/Petty Cash belum tersedia di Supabase. Hubungi administrator.');
+  if(code==='42501'||e?.status===403)return new Error('Akses ditolak: gunakan akun Bendahara Sekolah yang ditugaskan atau akun Super Admin asli. Simulasi peran tidak mengubah izin server.');
+  if(code==='23505')return new Error('Laporan untuk sekolah dan periode ini sudah tercatat. Muat ulang daftar sebelum mengirim kembali.');
+  if(code==='23514')return new Error('Data tidak memenuhi validasi keuangan: periksa nominal, pecahan uang, tanggal, dan bukti transaksi.');
+  const detail=[e?.message,e?.details].filter(Boolean).join(' — ');
+  return new Error(detail||'Gagal menyimpan data. Periksa koneksi dan coba lagi.');
+}
 function unwrap<T>(data:T[]|null,error:any):T[] {
-  if(error)throw new Error(error.message || String(error));
+  if(error)throw cashError(error);
   return data||[];
 }
 export const cashService={
@@ -49,8 +60,8 @@ export const cashService={
         amount:input.amount,item_photo_path:item.path,receipt_photo_path:receipt.path,
         notes:input.notes.trim()
       });
-      if(error)throw error;
-    }catch(error){await imageStorageService.cleanupImages(images);throw error;}
+      if(error)throw cashError(error);
+    }catch(error){await imageStorageService.cleanupImages(images);throw cashError(error);}
   },
   async listWeekly(schoolId:string):Promise<CashWeeklyCount[]>{
     const {data,error}=await supabase.from('arf_cash_weekly_counts').select('*').eq('school_id',schoolId)
