@@ -77,7 +77,7 @@ test('Petty Cash dashboard uses actual Supabase tables and scopes rows to author
  assert.match(view,/arf_cash_transactions/);
  assert.match(view,/arf_cash_weekly_counts/);
  assert.match(view,/arf_cash_reports/);
- assert.match(view,/Executive Dashboard/);
+ assert.match(view,/Laporan BOP Sekolah/);
  assert.match(view,/Saldo BKU akhir periode/);
  assert.match(view,/Perbandingan pemasukan dan pengeluaran/);
  const app=readFileSync(new URL('../src/App.tsx',import.meta.url),'utf8');
@@ -146,4 +146,48 @@ test('Named extra images cannot be treated as orphaned storage uploads',()=>{
  assert.match(sql,/a\.file_path=name/);
  assert.match(service,/check\.data\?\.id===recordId/);
  assert.match(service,/cleanupImages\(uploadedPaths\)/);
+});
+
+test('BOP executive menu renamed without replacing original executive dashboard',()=>{
+ const menu=readFileSync(new URL('../src/components/layout/Sidebar.tsx',import.meta.url),'utf8');
+ const app=readFileSync(new URL('../src/App.tsx',import.meta.url),'utf8');
+ const dashboard=readFileSync(new URL('../src/features/pettyCash/PettyCashDashboard.tsx',import.meta.url),'utf8');
+ assert.match(menu,/label: 'Laporan BOP Sekolah'/);
+ assert.match(menu,/label: 'Executive Dashboard'/);
+ assert.match(app,/title: 'Laporan BOP Sekolah'/);
+ assert.match(dashboard,/Laporan BOP Sekolah/);
+});
+
+test('BKU add form is a modal and delete requires reason with audit',()=>{
+ const ui=readFileSync(new URL('../src/features/pettyCash/PettyCashView.tsx',import.meta.url),'utf8');
+ const service=readFileSync(new URL('../src/services/cashService.ts',import.meta.url),'utf8');
+ const dashboard=readFileSync(new URL('../src/features/pettyCash/PettyCashDashboard.tsx',import.meta.url),'utf8');
+ assert.match(ui,/Tambah Transaksi/);
+ assert.match(ui,/role="dialog" aria-modal="true"/);
+ assert.match(ui,/form="cash-bku-add-form"/);
+ assert.match(ui,/role="alertdialog" aria-modal="true"/);
+ assert.match(ui,/deleteReason\.trim\(\)\.length<10/);
+ assert.match(ui,/canDeleteTransaction/);
+ assert.match(ui,/Riwayat Penghapusan BKU/);
+ assert.match(service,/arf_cash_void_transaction/);
+ assert.match(service,/arf_cash_transaction_voids/);
+ assert.match(service,/transactions\.filter\(t=>!voided\.has\(t\.id\)\)/);
+ assert.match(dashboard,/!voided\.has\(t\.id\)/);
+});
+
+test('BKU tombstones preserve evidence, block closed periods and are not editable',()=>{
+ const sql=readFileSync(new URL('../supabase/018_audited_bku_voids.sql',import.meta.url),'utf8');
+ assert.match(sql,/CREATE TABLE IF NOT EXISTS public\.arf_cash_transaction_voids/);
+ assert.match(sql,/ENABLE ROW LEVEL SECURITY/);
+ assert.match(sql,/arf_internal\.cash_readable\(school_id\)/);
+ assert.match(sql,/GRANT SELECT ON public\.arf_cash_transaction_voids TO authenticated/);
+ assert.match(sql,/arf_internal\.cash_treasurer\(tx\.school_id\)/);
+ assert.match(sql,/w\.week_ending>=tx\.transaction_date/);
+ assert.match(sql,/r\.period_end>=tx\.transaction_date/);
+ assert.match(sql,/to_jsonb\(tx\)/);
+ assert.match(sql,/voided_by/);
+ assert.match(sql,/NOT EXISTS \(/);
+ assert.match(sql,/v\.transaction_id=t\.id/);
+ assert.doesNotMatch(sql,/\bDELETE FROM public\.arf_cash_transactions\b/);
+ assert.doesNotMatch(sql,/\bGRANT INSERT ON public\.arf_cash_transaction_voids\b/);
 });
