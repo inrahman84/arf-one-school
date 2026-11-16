@@ -3,8 +3,10 @@ import {School} from '../../types';
 import {useAuth} from '../../context/AuthContext';
 import {cashService,CASH_DENOMINATIONS,emptyDenominations,periodFor,lastFriday,wibToday,
  money,formatDate,ledgerBalance,reportSummary,totalPhysical,CashTransaction,CashWeeklyCount,CashReport,
- CashApprovalEvent,Denominations,CashDirection} from '../../services/cashService';
+ CashApprovalEvent,Denominations,CashDirection,transactionAttachments} from '../../services/cashService';
 import {CashPrint} from './CashPrint';
+import {CashPhotoPicker,SelectedCashPhoto} from './CashPhotoPicker';
+import {RupiahField} from './RupiahField';
 
 type Tab='BKU'|'WEEKLY'|'MONTHLY';
 type CountForm={denominations:Denominations;bank:number;damaged:number;stamps:number;unposted:number;notes:string};
@@ -21,14 +23,13 @@ const CountFields:React.FC<{form:CountForm;change:(v:CountForm)=>void}>=({form,c
   <h4 className="font-semibold">Perhitungan Fisik Uang Tunai</h4>
   <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
    {CASH_DENOMINATIONS.map(d=><label key={d} className="text-xs">{money(d)} ({d>=1000?'Lbr':'Koin'})
-    <input type="number" min={0} step={1} className={cls} value={form.denominations[String(d)]||0}
-     onChange={e=>patch({denominations:{...form.denominations,[String(d)]:num(Number(e.target.value))}})}/></label>)}
+    <input type="text" inputMode="numeric" pattern="[0-9]*" className={cls} value={form.denominations[String(d)]||''}
+     placeholder="0" onChange={e=>patch({denominations:{...form.denominations,[String(d)]:num(Number(e.target.value.replace(/\\D/g,'')))}})}/></label>)}
   </div>
   <div className="grid sm:grid-cols-2 gap-3">
    {([['Saldo Bank','bank'],['Uang Rusak','damaged'],['Materai','stamps'],['Belum Dibukukan','unposted']] as const)
-    .map(([title,key])=><label key={key} className="text-xs">{title} (Rp)
-     <input type="number" min={0} step={1} className={cls} value={form[key]}
-      onChange={e=>patch({[key]:num(Number(e.target.value))})}/></label>)}
+    .map(([title,key])=><RupiahField key={key} label={title} value={form[key]}
+      onChange={v=>patch({[key]:v})}/>)}
   </div>
   <label className="block text-xs">Catatan / Penjelasan Selisih
    <textarea className={cls} rows={2} value={form.notes} onChange={e=>patch({notes:e.target.value})}/></label>
@@ -48,8 +49,8 @@ export const PettyCashView:React.FC<{schools:School[]}>=({schools})=>{
  const [busy,setBusy]=useState(false);const [error,setError]=useState('');const [message,setMessage]=useState('');
  const [date,setDate]=useState(wibToday());const [description,setDescription]=useState('');
  const [type,setType]=useState<CashDirection>('OUT');const [amount,setAmount]=useState(0);const [note,setNote]=useState('');
- const [itemFile,setItemFile]=useState<File|null>(null);const [receiptFile,setReceiptFile]=useState<File|null>(null);
- const [fileKey,setFileKey]=useState(0);const [friday,setFriday]=useState(lastFriday());
+ const [itemPhotos,setItemPhotos]=useState<SelectedCashPhoto[]>([]);
+ const [receiptPhotos,setReceiptPhotos]=useState<SelectedCashPhoto[]>([]);const [friday,setFriday]=useState(lastFriday());
  const [weeklyForm,setWeeklyForm]=useState<CountForm>(emptyCount);const [receiptsVerified,setReceiptsVerified]=useState(false);
  const [month,setMonth]=useState(wibToday().slice(0,7));const period=useMemo(()=>periodFor(month),[month]);
  const [countDate,setCountDate]=useState(period.end);const [monthForm,setMonthForm]=useState<CountForm>(emptyCount);
@@ -79,7 +80,7 @@ export const PettyCashView:React.FC<{schools:School[]}>=({schools})=>{
   let cancelled=false;
   if(!activeReport){setPhotoUrls({});return;}
   const paths=[...new Set(transactions.filter(t=>t.transaction_date>=activeReport.period_start&&
-   t.transaction_date<=activeReport.period_end).flatMap(t=>[t.item_photo_path,t.receipt_photo_path]))];
+   t.transaction_date<=activeReport.period_end).flatMap(t=>transactionAttachments(t).map(p=>p.file_path)))];
   setPhotosLoading(true);
   void Promise.all(paths.map(async p=>[p,await cashService.photoUrl(p)] as const)).then(pairs=>{
    if(!cancelled)setPhotoUrls(Object.fromEntries(pairs));
@@ -93,11 +94,14 @@ export const PettyCashView:React.FC<{schools:School[]}>=({schools})=>{
  };
  const saveTransaction=(e:React.FormEvent)=>{
   e.preventDefault();
-  if(!schoolId||!isTreasurer||!itemFile||!receiptFile){setError('Foto item dan nota wajib diunggah.');return;}
+  if(!schoolId||!isTreasurer||!itemPhotos.length||!receiptPhotos.length){setError('Minimal satu foto item dan satu foto nota wajib diunggah.');return;}
+  if([...itemPhotos,...receiptPhotos].some(p=>!p.name.trim())){setError('Setiap foto harus diberi nama.');return;}
   if(!Number.isSafeInteger(amount)||amount<=0){setError('Nominal harus berupa Rupiah positif.');return;}
   void act(async()=>{
-   await cashService.addTransaction({schoolId,date,description,direction:type,amount,itemFile,receiptFile,notes:note});
-   setDescription('');setAmount(0);setNote('');setItemFile(null);setReceiptFile(null);setFileKey(k=>k+1);
+   await cashService.addTransaction({schoolId,date,description,direction:type,amount,
+    itemPhotos:itemPhotos.map(({file,name})=>({file,name})),
+    receiptPhotos:receiptPhotos.map(({file,name})=>({file,name})),notes:note});
+   setDescription('');setAmount(0);setNote('');setItemPhotos([]);setReceiptPhotos([]);
   },'Transaksi BKU dan kedua foto bukti berhasil disimpan.');
  };
  const weeklyLedger=ledgerBalance(transactions,friday);
@@ -153,35 +157,76 @@ export const PettyCashView:React.FC<{schools:School[]}>=({schools})=>{
      <label className="text-xs">Jenis Transaksi<select className={cls} value={type}
       onChange={e=>setType(e.target.value as CashDirection)}><option value="OUT">Pengeluaran (Kredit)</option>
       <option value="IN">Penerimaan (Debet)</option></select></label>
-     <label className="text-xs">Jumlah (Rp)<input type="number" required min={1} step={1} className={cls}
-      value={amount} onChange={e=>setAmount(Number(e.target.value))}/></label>
+     <RupiahField label="Jumlah Transaksi" required value={amount} onChange={setAmount}/>
     </div>
     <label className="block text-xs">Uraian / Keterangan Transaksi<input required minLength={3}
      className={cls} value={description} onChange={e=>setDescription(e.target.value)}/></label>
-    <div className="grid sm:grid-cols-2 gap-3" key={fileKey}>
-     <label className="text-xs">Upload Foto Item / Kegiatan *<input type="file" required className={cls}
-      accept="image/jpeg,image/png,image/webp" onChange={e=>setItemFile(e.target.files?.[0]||null)}/></label>
-     <label className="text-xs">Upload Foto Kuitansi / Nota *<input type="file" required className={cls}
-      accept="image/jpeg,image/png,image/webp" onChange={e=>setReceiptFile(e.target.files?.[0]||null)}/></label>
+    <div className="grid lg:grid-cols-2 gap-3 items-start min-w-0">
+     <CashPhotoPicker title="Foto Item / Kegiatan" photos={itemPhotos} onChange={setItemPhotos} onError={setError}/>
+     <CashPhotoPicker title="Foto Kuitansi / Nota" photos={receiptPhotos} onChange={setReceiptPhotos} onError={setError}/>
     </div>
-    <p className="text-xs text-gray-600">Foto JPG, PNG, atau WebP; maksimal 5 MB per berkas. Catatan BKU bersifat append-only untuk keamanan audit.</p>
+    <p className="text-xs text-gray-600">Pilih beberapa foto sekaligus, beri nama masing-masing, dan periksa sebelum menyimpan. Transaksi yang berhasil disimpan memiliki riwayat yang tidak dapat dihapus.</p>
     <label className="block text-xs">Keterangan<textarea className={cls} value={note}
      onChange={e=>setNote(e.target.value)}/></label>
-    <button className={primary} type="submit" disabled={busy||!itemFile||!receiptFile}>Simpan BKU &amp; Bukti</button>
+    <button className={primary} type="submit" disabled={busy||!itemPhotos.length||!receiptPhotos.length}>Simpan BKU &amp; Bukti</button>
    </form>}
-   <section className="bg-white border rounded-xl p-4 overflow-x-auto">
-    <h3 className="font-semibold mb-3">BKU {school.school_name}</h3>
-    <table className="w-full text-xs border-collapse min-w-[680px]"><thead><tr>
-     {['No','Tanggal','Uraian','Debet','Kredit','Saldo','Keterangan','Lampiran'].map(h=><th className="border p-2 text-left" key={h}>{h}</th>)}
-    </tr></thead><tbody>
+   <section className="bg-white border rounded-xl p-3 sm:p-4 min-w-0">
+    <h3 className="font-semibold mb-3 text-[#073b2d]">BKU {school.school_name}</h3>
+    <p className="text-xs text-gray-500 mb-3">Pada ponsel dan tablet, setiap transaksi disusun menjadi kartu agar nominal dan bukti mudah dibaca. Pada desktop, gunakan tampilan tabel yang dapat digulir mendatar apabila diperlukan.</p>
+    <div className="hidden lg:block w-full overflow-x-auto rounded-lg border border-gray-200">
+     <table className="w-full min-w-[1120px] text-xs border-collapse">
+      <thead className="bg-[#f6f3ec]"><tr>
+       {['No','Tanggal','Uraian','Debet','Kredit','Saldo','Keterangan','Lampiran'].map(h=><th className="border-b p-3 text-left whitespace-nowrap" key={h}>{h}</th>)}
+      </tr></thead><tbody>
+       {reportSummary(transactions,'1900-01-01','9999-12-31').rows.map(({transaction:t,balance},i)=>
+        <tr className="align-top border-b last:border-b-0 hover:bg-gray-50" key={t.id}>
+         <td className="p-3">{i+1}</td>
+         <td className="p-3 whitespace-nowrap">{formatDate(t.transaction_date)}</td>
+         <td className="p-3 min-w-[160px] max-w-[240px] break-words">{t.description}</td>
+         <td className="p-3 whitespace-nowrap tabular-nums">{t.direction==='IN'?money(t.amount):'-'}</td>
+         <td className="p-3 whitespace-nowrap tabular-nums">{t.direction==='OUT'?money(t.amount):'-'}</td>
+         <td className="p-3 whitespace-nowrap tabular-nums font-semibold">{money(balance)}</td>
+         <td className="p-3 min-w-[120px] max-w-[210px] break-words">{t.notes?.trim()||'-'}</td>
+         <td className="p-3 min-w-[170px]">
+          <div className="flex flex-col gap-1">
+           {transactionAttachments(t).map(a=><button type="button" key={a.id}
+            className="text-left underline text-blue-700 break-words hover:text-blue-900"
+            title={a.kind==='ITEM'?'Foto Item / Kegiatan':'Foto Kuitansi / Nota'}
+            onClick={()=>void openPhoto(a.file_path)}>{a.kind==='ITEM'?'Item':'Nota'}: {a.display_name}</button>)}
+          </div>
+         </td>
+        </tr>)}
+      </tbody>
+     </table>
+    </div>
+    <div className="lg:hidden space-y-3">
      {reportSummary(transactions,'1900-01-01','9999-12-31').rows.map(({transaction:t,balance},i)=>
-      <tr key={t.id}><td className="border p-2">{i+1}</td><td className="border p-2">{formatDate(t.transaction_date)}</td>
-       <td className="border p-2">{t.description}</td>
-       <td className="border p-2">{t.direction==='IN'?money(t.amount):'-'}</td>
-       <td className="border p-2">{t.direction==='OUT'?money(t.amount):'-'}</td><td className="border p-2">{money(balance)}</td><td className="border p-2">{t.notes?.trim()||'-'}</td>
-       <td className="border p-2"><button className="underline text-blue-700 mr-2" onClick={()=>void openPhoto(t.item_photo_path)}>Item</button>
-        <button className="underline text-blue-700" onClick={()=>void openPhoto(t.receipt_photo_path)}>Nota</button></td></tr>)}
-    </tbody></table><p className="text-sm font-semibold mt-3">Saldo Akhir: {money(ledgerBalance(transactions,'9999-12-31'))}</p>
+       <article key={t.id} className="rounded-xl border border-gray-200 bg-white p-3 space-y-3 min-w-0">
+        <div className="flex flex-wrap justify-between gap-2 items-start border-b pb-2">
+         <strong className="text-sm text-[#073b2d]">#{i+1} — {formatDate(t.transaction_date)}</strong>
+         <span className={t.direction==='IN'?'text-xs font-semibold text-emerald-700':'text-xs font-semibold text-amber-700'}>{t.direction==='IN'?'Penerimaan':'Pengeluaran'}</span>
+        </div>
+        <p className="text-sm font-medium break-words">{t.description}</p>
+        <div className="grid grid-cols-2 gap-2 text-xs">
+         <div><span className="text-gray-500">Debet</span><p className="font-semibold tabular-nums">{t.direction==='IN'?money(t.amount):'-'}</p></div>
+         <div><span className="text-gray-500">Kredit</span><p className="font-semibold tabular-nums">{t.direction==='OUT'?money(t.amount):'-'}</p></div>
+         <div className="col-span-2 rounded-lg bg-[#f6f3ec] p-2">
+          <span className="text-gray-500">Saldo</span><p className="font-bold text-[#073b2d] tabular-nums">{money(balance)}</p>
+         </div>
+        </div>
+        <div className="text-xs"><span className="text-gray-500">Keterangan</span>
+         <p className="mt-1 whitespace-pre-wrap break-words">{t.notes?.trim()||'-'}</p></div>
+        <div className="text-xs"><span className="text-gray-500">Lampiran</span>
+         <div className="flex flex-wrap gap-2 mt-2">
+          {transactionAttachments(t).map(a=><button type="button" key={a.id}
+           className="rounded-lg border border-[#3f6276] px-2 py-1.5 text-[#073b2d] text-left break-words"
+           onClick={()=>void openPhoto(a.file_path)}>{a.kind==='ITEM'?'Item':'Nota'}: {a.display_name}</button>)}
+         </div>
+        </div>
+       </article>)}
+    </div>
+    {transactions.length===0&&<p className="py-6 text-center text-xs text-gray-500">Belum ada transaksi BKU pada sekolah ini.</p>}
+    <p className="text-sm font-semibold mt-4 rounded-lg bg-[#f6f3ec] p-3">Saldo Akhir BKU: {money(ledgerBalance(transactions,'9999-12-31'))}</p>
    </section>
   </div>}
   {school&&tab==='WEEKLY'&&<div className="space-y-4">
@@ -229,8 +274,7 @@ export const PettyCashView:React.FC<{schools:School[]}>=({schools})=>{
       max={period.end} value={countDate} onChange={e=>setCountDate(e.target.value)}/></label>
     </div>
     <CountFields form={monthForm} change={setMonthForm}/>
-    <label className="block text-xs">Dana dalam Proses Reimbursement (Rp)<input type="number"
-     min={0} step={1} className={cls} value={reimbursement} onChange={e=>setReimbursement(num(Number(e.target.value)))}/></label>
+    <RupiahField label="Dana dalam Proses Reimbursement" value={reimbursement} onChange={setReimbursement}/>
     <p className="text-sm">Saldo Buku pada Tanggal Opname: <b>{money(monthLedger)}</b> · Total Fisik: <b>{money(monthPhysical)}</b> · Selisih: <b>{money(monthPhysical-monthLedger)}</b></p>
     <button className={primary} disabled={busy} onClick={saveReport}>Simpan Draft</button>
    </section>}
