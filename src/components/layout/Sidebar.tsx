@@ -75,7 +75,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           key: 'cashDashboard' as NavItemKey,
           label: 'Executive Dashboard BKU & Petty Cash',
           icon: WalletCards,
-          visible: isFoundationManager || ['SCHOOL_TREASURER','SCHOOL_PRINCIPAL','ARF_HEAD_TU'].includes(userProfile?.role || '')
+          visible: ['SUPER_ADMIN','FOUNDATION_MANAGER','SCHOOL_TREASURER','SCHOOL_PRINCIPAL','ARF_HEAD_TU'].includes(userProfile?.role || '')
         }
       ]
     },
@@ -138,7 +138,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           key: 'pettyCash' as NavItemKey,
           label: 'BKU & Petty Cash',
           icon: WalletCards,
-          visible: isFoundationManager || ['SCHOOL_TREASURER','SCHOOL_PRINCIPAL','ARF_HEAD_TU'].includes(effectiveRole)
+          visible: ['SUPER_ADMIN','FOUNDATION_MANAGER','SCHOOL_TREASURER','SCHOOL_PRINCIPAL','ARF_HEAD_TU'].includes(userProfile?.role || '')
         },
         {
           key: 'verification' as NavItemKey,
