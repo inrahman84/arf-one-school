@@ -5,6 +5,7 @@ import {
   Users,
   Building2,
   BarChart3,
+  WalletCards,
   ShieldCheck,
   MapPin,
   Settings,
@@ -30,6 +31,7 @@ export type NavItemKey =
   | 'facilities'
   | 'verification'
   | 'reports'
+  | 'pettyCash'
   | 'users'
   | 'regions'
   | 'academicYears'
@@ -125,6 +127,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       title: 'DATA & LAPORAN',
       items: [
+        {
+          key: 'pettyCash' as NavItemKey,
+          label: 'BKU & Petty Cash',
+          icon: WalletCards,
+          visible: isFoundationManager || ['SCHOOL_TREASURER','SCHOOL_PRINCIPAL','ARF_HEAD_TU'].includes(effectiveRole)
+        },
         {
           key: 'verification' as NavItemKey,
           label: 'Status & Verifikasi',
