@@ -5,9 +5,8 @@ import {cashService,CASH_DENOMINATIONS,emptyDenominations,periodFor,lastFriday,w
  money,formatDate,ledgerBalance,reportSummary,totalPhysical,CashTransaction,CashWeeklyCount,CashReport,
  CashApprovalEvent,Denominations,CashDirection} from '../../services/cashService';
 import {CashPrint} from './CashPrint';
-import {PettyCashDashboard} from './PettyCashDashboard';
 
-type Tab='DASHBOARD'|'BKU'|'WEEKLY'|'MONTHLY';
+type Tab='BKU'|'WEEKLY'|'MONTHLY';
 type CountForm={denominations:Denominations;bank:number;damaged:number;stamps:number;unposted:number;notes:string};
 const emptyCount=():CountForm=>({denominations:emptyDenominations(),bank:0,damaged:0,stamps:0,unposted:0,notes:''});
 const cls='w-full border rounded-lg px-3 py-2 text-sm bg-white';
@@ -41,7 +40,7 @@ export const PettyCashView:React.FC<{schools:School[]}>=({schools})=>{
  const allowed=useMemo(()=>global?schools:schools.filter(s=>
   ['SCHOOL_TREASURER','SCHOOL_PRINCIPAL'].includes(userProfile?.role||'')&&
    (userProfile?.assignedSchools||[]).includes(s.school_id)),[schools,global,effectiveRole,userProfile?.assignedSchools]);
- const [schoolId,setSchoolId]=useState('');const [tab,setTab]=useState<Tab>('DASHBOARD');
+ const [schoolId,setSchoolId]=useState('');const [tab,setTab]=useState<Tab>('BKU');
  const [transactions,setTransactions]=useState<CashTransaction[]>([]);
  const [weekly,setWeekly]=useState<CashWeeklyCount[]>([]);
  const [reports,setReports]=useState<CashReport[]>([]);
@@ -135,7 +134,7 @@ export const PettyCashView:React.FC<{schools:School[]}>=({schools})=>{
       allowed.map(s=><option key={s.school_id} value={s.school_id}>{s.school_name}</option>)}
     </select></label>
    <div className="flex gap-2 flex-wrap">
-    {([['DASHBOARD','Executive Dashboard'],['BKU','BKU Harian'],['WEEKLY','Cash Opname Mingguan'],['MONTHLY','Berita Acara & LPJ Bulanan']] as [Tab,string][])
+    {([['BKU','BKU Harian'],['WEEKLY','Cash Opname Mingguan'],['MONTHLY','Berita Acara & LPJ Bulanan']] as [Tab,string][])
      .map(([key,text])=><button key={key} className={tab===key?primary:secondary}
        onClick={()=>setTab(key)}>{text}</button>)}
    </div>
@@ -143,7 +142,6 @@ export const PettyCashView:React.FC<{schools:School[]}>=({schools})=>{
   {error&&<p role="alert" className="p-3 rounded bg-red-50 border border-red-200 text-red-800 text-sm">{error}</p>}
   {message&&<p role="status" className="p-3 rounded bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm">{message}</p>}
   {!school&&<p className="text-sm">Pilih sekolah yang berwenang diakses.</p>}
-  {tab==='DASHBOARD'&&<PettyCashDashboard schools={allowed} />}
   {school&&tab==='BKU'&&<div className="space-y-4">
    {!isTreasurer&&<p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">Pencatatan BKU hanya dapat dilakukan oleh akun Bendahara Sekolah yang ditugaskan atau Super Admin asli. Simulasi peran di header tidak mengubah izin Supabase.</p>}
    {isTreasurer&&<form className="p-4 border bg-white rounded-xl space-y-3" onSubmit={saveTransaction}>
