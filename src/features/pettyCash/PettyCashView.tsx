@@ -222,7 +222,7 @@ export const PettyCashView:React.FC<{schools:School[]}>=({schools})=>{
     <div className="grid sm:grid-cols-3 gap-3">
      <label className="text-xs">Bulan Laporan<input type="month" className={cls} value={month} disabled={!!editingId}
       onChange={e=>{setMonth(e.target.value);setEditingId('');setPreviewId('');}}/></label>
-     <p className="text-xs">Periode LPJ<div className="border rounded-lg p-2 text-sm">{formatDate(period.start)} – {formatDate(period.end)}</div></p>
+     <div className="text-xs">Periode LPJ<div className="border rounded-lg p-2 text-sm">{formatDate(period.start)} – {formatDate(period.end)}</div></div>
      <label className="text-xs">Tanggal Opname<input type="date" className={cls} min={period.end.slice(0,8)+'18'}
       max={period.end} value={countDate} onChange={e=>setCountDate(e.target.value)}/></label>
     </div>
