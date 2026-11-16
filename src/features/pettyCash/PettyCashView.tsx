@@ -213,6 +213,13 @@ export const PettyCashView:React.FC<{schools:School[]}>=({schools})=>{
             title={a.kind==='ITEM'?'Foto Item / Kegiatan':'Foto Kuitansi / Nota'}
             onClick={()=>void openPhoto(a.file_path)}>{a.kind==='ITEM'?'Item':'Nota'}: {a.display_name}</button>)}
           </div>
+          {isTreasurer&&<div className="mt-2 border-t pt-2">
+           <button type="button" className="inline-flex items-center gap-1 text-red-700 disabled:text-gray-400 disabled:cursor-not-allowed"
+            disabled={busy||!canDeleteTransaction(t)} title={canDeleteTransaction(t)?'Hapus transaksi dengan audit':'Terkunci oleh cash opname atau LPJ'}
+            onClick={()=>{setError('');setDeleteReason('');setDeleteTarget(t);}}>
+            <Trash2 size={13}/>{canDeleteTransaction(t)?'Hapus':'Terkunci'}
+           </button>
+          </div>}
          </td>
         </tr>)}
       </tbody>
@@ -242,6 +249,12 @@ export const PettyCashView:React.FC<{schools:School[]}>=({schools})=>{
            onClick={()=>void openPhoto(a.file_path)}>{a.kind==='ITEM'?'Item':'Nota'}: {a.display_name}</button>)}
          </div>
         </div>
+        {isTreasurer&&<button type="button" className="inline-flex items-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-700 disabled:text-gray-400"
+         disabled={busy||!canDeleteTransaction(t)}
+         title={canDeleteTransaction(t)?'Hapus transaksi dengan jejak audit':'Transaksi sudah masuk opname atau LPJ'}
+         onClick={()=>{setError('');setDeleteReason('');setDeleteTarget(t);}}>
+         <Trash2 size={14}/>{canDeleteTransaction(t)?'Hapus Transaksi':'Transaksi Terkunci'}
+        </button>}
        </article>)}
     </div>
     {transactions.length===0&&<p className="py-6 text-center text-xs text-gray-500">Belum ada transaksi BKU pada sekolah ini.</p>}
