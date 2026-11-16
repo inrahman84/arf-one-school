@@ -106,6 +106,7 @@ CREATE TABLE IF NOT EXISTS public.arf_cash_approval_events(
  to_status text NOT NULL,
  actor_id uuid NOT NULL REFERENCES auth.users(id),
  actor_role text NOT NULL,
+ actor_name text NOT NULL,
  comment text NOT NULL DEFAULT '',
  occurred_at timestamptz NOT NULL DEFAULT now()
 );
@@ -297,8 +298,9 @@ BEGIN
  PERFORM set_config('arf.cash_approval_transition','yes',true);
  UPDATE public.arf_cash_reports SET status=next_status,updated_at=now() WHERE id=r.id;
  INSERT INTO public.arf_cash_approval_events(
-  report_id,school_id,action,from_status,to_status,actor_id,actor_role,comment)
- VALUES(r.id,r.school_id,action_name,r.status,next_status,auth.uid(),actor_role,coalesce(p_comment,''));
+  report_id,school_id,action,from_status,to_status,actor_id,actor_role,actor_name,comment)
+ VALUES(r.id,r.school_id,action_name,r.status,next_status,auth.uid(),actor_role,
+ (SELECT m.display_name FROM public.arf_school_members m WHERE m.user_id=auth.uid()),coalesce(p_comment,''));
  RETURN next_status;
 END;
 $$;
