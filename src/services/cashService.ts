@@ -76,7 +76,7 @@ export const cashService={
       school_id:input.schoolId,week_ending:input.friday,denominations:input.denominations,
       bank_balance:input.bank,damaged_cash:input.damaged,stamps_value:input.stamps,
       unposted_value:input.unposted,notes:input.notes,receipts_verified:true
-    });if(error)throw error;
+    });if(error)throw cashError(error);
   },
   async listReports(schoolId:string):Promise<CashReport[]>{
     const {data,error}=await supabase.from('arf_cash_reports').select('*').eq('school_id',schoolId)
@@ -95,16 +95,16 @@ export const cashService={
       status:'DRAFT' as const};
     if(input.id){
       const {error}=await supabase.from('arf_cash_reports').update(payload).eq('id',input.id);
-      if(error)throw error;
+      if(error)throw cashError(error);
     }else{
       const {error}=await supabase.from('arf_cash_reports').insert(payload);
-      if(error)throw error;
+      if(error)throw cashError(error);
     }
   },
   async transition(id:string,decision:'SUBMIT'|'APPROVE'|'RETURN',comment=''):Promise<string>{
     const {data,error}=await supabase.rpc('arf_cash_transition',{
       p_report_id:id,p_decision:decision,p_comment:comment
-    });if(error)throw error;return String(data);
+    });if(error)throw cashError(error);return String(data);
   },
   async listApprovalEvents(schoolId:string):Promise<CashApprovalEvent[]>{
     const {data,error}=await supabase.from('arf_cash_approval_events').select('*').eq('school_id',schoolId)
