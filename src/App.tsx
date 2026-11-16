@@ -21,6 +21,7 @@ import { FacilitiesView } from './features/facilities/FacilitiesView';
 import { VerificationView } from './features/verification/VerificationView';
 import { ReportsView } from './features/reports/ReportsView';
 import { PettyCashView } from './features/pettyCash/PettyCashView';
+import { PettyCashDashboard } from './features/pettyCash/PettyCashDashboard';
 import { UserManagementView } from './features/administration/UserManagementView';
 import { RegionManagementView } from './features/administration/RegionManagementView';
 import { AuditLogView } from './features/administration/AuditLogView';
@@ -222,6 +223,10 @@ const MainAppContent: React.FC = () => {
       title: 'Status Verifikasi & Pengajuan',
       subtitle: 'Persetujuan bertingkat Kepala Sekolah dan Verifikator Yayasan ARF'
     },
+    cashDashboard: {
+      title: 'Executive Dashboard BKU & Petty Cash',
+      subtitle: 'Infografis penerimaan, pengeluaran, saldo, opname, dan status LPJ sekolah'
+    },
     pettyCash: {
       title: 'BKU & Petty Cash Sekolah',
       subtitle: 'Transaksi harian, cash opname, LPJ, dan persetujuan berjenjang'
@@ -394,6 +399,7 @@ const MainAppContent: React.FC = () => {
             />
           )}
 
+          {activeTab === 'cashDashboard' && <PettyCashDashboard schools={schools} />}
           {activeTab === 'pettyCash' && <PettyCashView schools={schools} />}
 
           {activeTab === 'reports' && (
