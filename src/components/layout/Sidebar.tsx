@@ -32,6 +32,7 @@ export type NavItemKey =
   | 'verification'
   | 'reports'
   | 'pettyCash'
+  | 'cashDashboard'
   | 'users'
   | 'regions'
   | 'academicYears'
@@ -69,6 +70,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
           label: 'Executive Dashboard',
           icon: LayoutDashboard,
           visible: true
+        },
+        {
+          key: 'cashDashboard' as NavItemKey,
+          label: 'Executive Dashboard BKU & Petty Cash',
+          icon: WalletCards,
+          visible: isFoundationManager || ['SCHOOL_TREASURER','SCHOOL_PRINCIPAL','ARF_HEAD_TU'].includes(userProfile?.role || '')
         }
       ]
     },
