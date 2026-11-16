@@ -3,6 +3,21 @@ import { imageStorageService } from './imageStorageService';
 
 import type { Denominations, CashDirection, CashTransaction } from '../lib/pettyCashMath';
 export * from '../lib/pettyCashMath';
+export interface CashAttachment {
+  id:string; transaction_id:string; school_id:string; kind:'ITEM'|'RECEIPT';
+  display_name:string; file_path:string; sort_order:number;
+}
+export interface NamedCashPhoto { file:File; name:string; }
+export function transactionAttachments(t:CashTransaction):CashAttachment[] {
+  const existing=(t as CashTransaction & {attachments?:CashAttachment[]}).attachments;
+  if(existing?.length)return [...existing].sort((a,b)=>a.kind.localeCompare(b.kind)||a.sort_order-b.sort_order);
+  return [
+    {id:t.id+'-legacy-item',transaction_id:t.id,school_id:t.school_id,kind:'ITEM' as const,
+      display_name:'Foto Item / Kegiatan',file_path:t.item_photo_path,sort_order:1},
+    {id:t.id+'-legacy-receipt',transaction_id:t.id,school_id:t.school_id,kind:'RECEIPT' as const,
+      display_name:'Kuitansi / Nota',file_path:t.receipt_photo_path,sort_order:1}
+  ].filter(v=>v.file_path);
+}
 export interface CashWeeklyCount {
   id:string;school_id:string;week_ending:string;denominations:Denominations;
   bank_balance:number;damaged_cash:number;stamps_value:number;unposted_value:number;
@@ -40,28 +55,63 @@ function unwrap<T>(data:T[]|null,error:any):T[] {
 }
 export const cashService={
   async listTransactions(schoolId:string):Promise<CashTransaction[]>{
-    const {data,error}=await supabase.from('arf_cash_transactions').select('*').eq('school_id',schoolId)
-      .order('transaction_date',{ascending:true}).order('created_at',{ascending:true});
-    return unwrap<CashTransaction>(data as CashTransaction[]|null,error);
+    const [txResult,attachmentResult]=await Promise.all([
+      supabase.from('arf_cash_transactions').select('*').eq('school_id',schoolId)
+        .order('transaction_date',{ascending:true}).order('created_at',{ascending:true}),
+      supabase.from('arf_cash_transaction_attachments').select('*').eq('school_id',schoolId)
+        .order('sort_order',{ascending:true})
+    ]);
+    const transactions=unwrap<CashTransaction>(txResult.data as CashTransaction[]|null,txResult.error);
+    const attachments=unwrap<CashAttachment>(attachmentResult.data as CashAttachment[]|null,attachmentResult.error);
+    const byTransaction=new Map<string,CashAttachment[]>();
+    for(const attachment of attachments){
+      const list=byTransaction.get(attachment.transaction_id)||[];
+      list.push(attachment);
+      byTransaction.set(attachment.transaction_id,list);
+    }
+    return transactions.map(t=>({...t,attachments:byTransaction.get(t.id)||[]}));
   },
   async addTransaction(input:{
     schoolId:string;date:string;description:string;direction:CashDirection;amount:number;
-    itemFile:File;receiptFile:File;notes:string;
+    itemPhotos:NamedCashPhoto[];receiptPhotos:NamedCashPhoto[];notes:string;
   }):Promise<void>{
-    const recordId=crypto.randomUUID();const images:string[]=[];
+    if(!input.itemPhotos.length||!input.receiptPhotos.length)
+      throw new Error('Minimal satu foto item dan satu foto kuitansi wajib dilampirkan.');
+    if(input.itemPhotos.length>12||input.receiptPhotos.length>12)
+      throw new Error('Maksimal 12 foto per kategori untuk setiap transaksi BKU.');
+    const photos=[...input.itemPhotos,...input.receiptPhotos];
+    for(const photo of photos){
+      if(!photo.name.trim()||photo.name.trim().length>150)
+        throw new Error('Setiap foto wajib memiliki nama 1–150 karakter.');
+    }
+    const recordId=crypto.randomUUID();
+    const uploadedPaths:string[]=[];
+    let saved=false;
     try{
-      const item=await imageStorageService.uploadImage(input.itemFile,input.schoolId,'petty-cash',recordId,'item');
-      images.push(item.path);
-      const receipt=await imageStorageService.uploadImage(input.receiptFile,input.schoolId,'petty-cash',recordId,'receipt');
-      images.push(receipt.path);
-      const {error}=await supabase.from('arf_cash_transactions').insert({
-        id:recordId,school_id:input.schoolId,transaction_date:input.date,
-        description:input.description.trim(),direction:input.direction,
-        amount:input.amount,item_photo_path:item.path,receipt_photo_path:receipt.path,
-        notes:input.notes.trim()
+      const uploadGroup=async(group:NamedCashPhoto[],type:'item'|'receipt')=>{
+        const uploaded:{path:string;name:string}[]=[];
+        for(const photo of group){
+          const file=await imageStorageService.uploadImage(photo.file,input.schoolId,'petty-cash',recordId,type);
+          uploadedPaths.push(file.path);
+          uploaded.push({path:file.path,name:photo.name.trim()});
+        }
+        return uploaded;
+      };
+      const items=await uploadGroup(input.itemPhotos,'item');
+      const receipts=await uploadGroup(input.receiptPhotos,'receipt');
+      // RPC creates both the BKU entry and all named evidence atomically.
+      const {error}=await supabase.rpc('arf_cash_create_transaction',{
+        p_id:recordId,p_school_id:input.schoolId,p_transaction_date:input.date,
+        p_description:input.description.trim(),p_direction:input.direction,
+        p_amount:input.amount,p_notes:input.notes.trim(),
+        p_items:items,p_receipts:receipts
       });
       if(error)throw cashError(error);
-    }catch(error){await imageStorageService.cleanupImages(images);throw cashError(error);}
+      saved=true;
+    }catch(error){
+      if(!saved)await imageStorageService.cleanupImages(uploadedPaths);
+      throw cashError(error);
+    }
   },
   async listWeekly(schoolId:string):Promise<CashWeeklyCount[]>{
     const {data,error}=await supabase.from('arf_cash_weekly_counts').select('*').eq('school_id',schoolId)
