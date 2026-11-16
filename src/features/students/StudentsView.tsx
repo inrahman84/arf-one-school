@@ -58,10 +58,13 @@ export const StudentsView:React.FC<Props>=({schools,classes,students,movements,i
    if(!studentToArchive || !canManagePrivate)return;
    setArchiveBusy(true);setArchiveError(null);
    try{
-     await studentsService.archiveStudent(studentToArchive.school_id,studentToArchive.student_id);
-     setNotice('Peserta didik sudah masuk Arsip Peserta Didik. Gunakan menu tersebut untuk memulihkan atau menghapus permanen (khusus Super Admin).');
+     const archivedSchoolId=studentToArchive.school_id;
+     await studentsService.archiveStudent(archivedSchoolId,studentToArchive.student_id);
      setStudentToArchive(null);
      await onRefresh();
+     // Immediately show the record's archive instead of leaving the user on
+     // the active roster with a message directing them to find another menu.
+     onManageArchive(archivedSchoolId);
    }catch(err){setArchiveError(err instanceof Error?err.message:'Gagal mengarsipkan peserta didik.');}
    finally{setArchiveBusy(false)}
  };
