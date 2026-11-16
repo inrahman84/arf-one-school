@@ -14,8 +14,8 @@ export const imageStorageService={
     if(error){console.warn('Foto tidak dapat dibaca:',error.message);return undefined;}
     return data.signedUrl;
   },
-  async uploadImage(file:File,schoolId:string,recordType:'assets'|'facilities',recordId:string,
-    photoType:'asset'|'physical'|'damage',onProgress?:(percent:number)=>void):Promise<StoredImage>{
+  async uploadImage(file:File,schoolId:string,recordType:'assets'|'facilities'|'petty-cash',recordId:string,
+    photoType:'asset'|'physical'|'damage'|'item'|'receipt',onProgress?:(percent:number)=>void):Promise<StoredImage>{
     validateImageFile(file);checkImageUploadReady();
     const {data:session}=await supabase.auth.getSession();if(!session.session)throw new Error('Harus login ke Supabase sebelum mengunggah foto.');
     const path=`schools/${safe(schoolId)}/${recordType}/${safe(recordId)}/${photoType}/${crypto.randomUUID()}.${ALLOWED[file.type]}`;
