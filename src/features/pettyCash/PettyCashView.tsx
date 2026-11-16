@@ -24,7 +24,7 @@ const CountFields:React.FC<{form:CountForm;change:(v:CountForm)=>void}>=({form,c
   <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
    {CASH_DENOMINATIONS.map(d=><label key={d} className="text-xs">{money(d)} ({d>=1000?'Lbr':'Koin'})
     <input type="text" inputMode="numeric" pattern="[0-9]*" className={cls} value={form.denominations[String(d)]||''}
-     placeholder="0" onChange={e=>patch({denominations:{...form.denominations,[String(d)]:num(Number(e.target.value.replace(/\\D/g,'')))}})}/></label>)}
+     placeholder="0" onChange={e=>patch({denominations:{...form.denominations,[String(d)]:num(Number(e.target.value.replace(/\D/g,'')))}})}/></label>)}
   </div>
   <div className="grid sm:grid-cols-2 gap-3">
    {([['Saldo Bank','bank'],['Uang Rusak','damaged'],['Materai','stamps'],['Belum Dibukukan','unposted']] as const)
