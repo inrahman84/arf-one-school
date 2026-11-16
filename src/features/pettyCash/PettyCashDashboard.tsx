@@ -6,15 +6,16 @@ import {School} from '../../types';
 import {useAuth} from '../../context/AuthContext';
 import {periodFor,formatDate,money,wibToday} from '../../services/cashService';
 
-type FinancialTransaction={school_id:string;transaction_date:string;amount:number;direction:'IN'|'OUT'};
+type FinancialTransaction={id:string;school_id:string;transaction_date:string;amount:number;direction:'IN'|'OUT'};
+type VoidRecord={transaction_id:string;school_id:string};
 type Weekly={school_id:string;week_ending:string;variance:number;submitted_at:string};
 type Report={school_id:string;period_end:string;status:string;variance:number};
-type Records={transactions:FinancialTransaction[];weekly:Weekly[];reports:Report[]};
-const INITIAL:Records={transactions:[],weekly:[],reports:[]};
+type Records={transactions:FinancialTransaction[];weekly:Weekly[];reports:Report[];voids:VoidRecord[]};
+const INITIAL:Records={transactions:[],weekly:[],reports:[],voids:[]};
 const COLORS=['#073b2d','#c89b55','#3f6276','#009b4c','#d97706','#dc2626'];
 const compact=(v:number)=>Math.abs(v)>=1e9?(v/1e9).toFixed(1)+' M':Math.abs(v)>=1e6?(v/1e6).toFixed(1)+' jt':Math.abs(v)>=1000?(v/1000).toFixed(0)+' rb':String(v);
 
-async function loadRows<T>(table:'arf_cash_transactions'|'arf_cash_weekly_counts'|'arf_cash_reports',columns:string,ids:string[]):Promise<T[]>{
+async function loadRows<T>(table:'arf_cash_transactions'|'arf_cash_weekly_counts'|'arf_cash_reports'|'arf_cash_transaction_voids',columns:string,ids:string[]):Promise<T[]>{
   if(ids.length===0)return [];
   const result:T[]=[];const pageSize=500;
   for(let offset=0; ;offset+=pageSize){
@@ -29,12 +30,13 @@ async function loadRows<T>(table:'arf_cash_transactions'|'arf_cash_weekly_counts
   return result;
 }
 async function loadFinancialData(ids:string[]):Promise<Records>{
-  const [transactions,weekly,reports]=await Promise.all([
-    loadRows<FinancialTransaction>('arf_cash_transactions','school_id,transaction_date,amount,direction',ids),
+  const [transactions,weekly,reports,voids]=await Promise.all([
+    loadRows<FinancialTransaction>('arf_cash_transactions','id,school_id,transaction_date,amount,direction',ids),
     loadRows<Weekly>('arf_cash_weekly_counts','school_id,week_ending,variance,submitted_at',ids),
-    loadRows<Report>('arf_cash_reports','school_id,period_end,status,variance',ids)
+    loadRows<Report>('arf_cash_reports','school_id,period_end,status,variance',ids),
+    loadRows<VoidRecord>('arf_cash_transaction_voids','transaction_id,school_id',ids)
   ]);
-  return {transactions,weekly,reports};
+  return {transactions,weekly,reports,voids};
 }
 function Kpi({icon:Icon,label,value,description}:{icon:React.ElementType;label:string;value:string;description:string}){
   return <section className="rounded-xl border border-gray-200 bg-white p-4 min-w-0 shadow-sm">
@@ -84,7 +86,8 @@ export const PettyCashDashboard:React.FC<{schools:School[]}>=({schools})=>{
   const schoolMap=useMemo(()=>new Map(permittedSchools.map(s=>[s.school_id,s.school_name])),[permittedSchools]);
   const summary=useMemo(()=>{
     const visible=scope==='ALL'?new Set(schoolIds):new Set([scope]);
-    const transactions=records.transactions.filter(t=>visible.has(t.school_id));
+    const voided=new Set(records.voids.map(v=>v.transaction_id));
+    const transactions=records.transactions.filter(t=>visible.has(t.school_id)&&!voided.has(t.id));
     const inside=transactions.filter(t=>t.transaction_date>=period.start&&t.transaction_date<=period.end);
     const incoming=inside.reduce((s,t)=>s+(t.direction==='IN'?Number(t.amount):0),0);
     const outgoing=inside.reduce((s,t)=>s+(t.direction==='OUT'?Number(t.amount):0),0);
