@@ -136,3 +136,14 @@ test('BKU layout is adaptive and Rupiah amounts are typed directly without spinn
  assert.match(rupiah,/replace\(\/\\D\/g/);
  assert.doesNotMatch(rupiah,/type="number"/);
 });
+
+test('Named extra images cannot be treated as orphaned storage uploads',()=>{
+ const sql=readFileSync(new URL('../supabase/017_protect_named_cash_photos.sql',import.meta.url),'utf8');
+ const service=readFileSync(new URL('../src/services/cashService.ts',import.meta.url),'utf8');
+ assert.match(sql,/DROP POLICY IF EXISTS arf_cash_storage_delete_unlinked/);
+ assert.match(sql,/NOT EXISTS \(/);
+ assert.match(sql,/public\.arf_cash_transaction_attachments a/);
+ assert.match(sql,/a\.file_path=name/);
+ assert.match(service,/check\.data\?\.id===recordId/);
+ assert.match(service,/cleanupImages\(uploadedPaths\)/);
+});
