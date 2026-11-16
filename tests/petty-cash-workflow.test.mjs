@@ -80,7 +80,12 @@ test('Petty Cash dashboard uses actual Supabase tables and scopes rows to author
  assert.match(view,/Executive Dashboard/);
  assert.match(view,/Saldo BKU akhir periode/);
  assert.match(view,/Perbandingan pemasukan dan pengeluaran/);
- assert.match(module,/PettyCashDashboard/);
+ const app=readFileSync(new URL('../src/App.tsx',import.meta.url),'utf8');
+ const menu=readFileSync(new URL('../src/components/layout/Sidebar.tsx',import.meta.url),'utf8');
+ assert.match(app,/activeTab === 'cashDashboard'/);
+ assert.match(menu,/title: 'UTAMA'/);
+ assert.match(menu,/key: 'cashDashboard' as NavItemKey/);
+ assert.doesNotMatch(module,/tab==='DASHBOARD'/);
  assert.match(module,/\['No','Tanggal','Uraian','Debet','Kredit','Saldo','Keterangan','Lampiran'\]/);
  assert.match(module,/t\.notes\?\.trim\(\)\|\|'-'/);
 });
@@ -95,4 +100,39 @@ test('BKU and weekly inserts are protected by actual role rather than role simul
  assert.match(component,/Simulasi peran di header tidak mengubah izin Supabase/);
  assert.match(component,/cashService\.addTransaction/);
  assert.match(component,/cashService\.submitWeekly/);
+});
+
+test('BKU accepts multiple named images and saves them in one verified transaction',()=>{
+ const service=readFileSync(new URL('../src/services/cashService.ts',import.meta.url),'utf8');
+ const input=readFileSync(new URL('../src/features/pettyCash/CashPhotoPicker.tsx',import.meta.url),'utf8');
+ const sql=readFileSync(new URL('../supabase/016_petty_cash_named_evidence.sql',import.meta.url),'utf8');
+ const print=readFileSync(new URL('../src/features/pettyCash/CashPrint.tsx',import.meta.url),'utf8');
+ assert.match(input,/multiple className=/);
+ assert.match(input,/Nama Foto/);
+ assert.match(input,/maxLength=\{150\}/);
+ assert.match(input,/photos\.length\+incoming\.length>12/);
+ assert.match(service,/arf_cash_transaction_attachments/);
+ assert.match(service,/arf_cash_create_transaction/);
+ assert.match(service,/itemPhotos:NamedCashPhoto\[\]/);
+ assert.match(service,/receiptPhotos:NamedCashPhoto\[\]/);
+ assert.match(service,/p_items:items,p_receipts:receipts/);
+ assert.match(sql,/ENABLE ROW LEVEL SECURITY/);
+ assert.match(sql,/arf_internal\.cash_treasurer\(p_school_id\)/);
+ assert.match(sql,/transaction_id,school_id,kind,display_name,file_path,sort_order/);
+ assert.match(sql,/first_item,first_receipt/);
+ assert.match(print,/transactionAttachments\(t\)\.map/);
+ assert.match(print,/a\.display_name/);
+});
+
+test('BKU layout is adaptive and Rupiah amounts are typed directly without spinners',()=>{
+ const ui=readFileSync(new URL('../src/features/pettyCash/PettyCashView.tsx',import.meta.url),'utf8');
+ const rupiah=readFileSync(new URL('../src/features/pettyCash/RupiahField.tsx',import.meta.url),'utf8');
+ assert.match(ui,/hidden lg:block w-full overflow-x-auto/);
+ assert.match(ui,/lg:hidden space-y-3/);
+ assert.match(ui,/transactionAttachments\(t\)\.map/);
+ assert.match(ui,/RupiahField label="Jumlah Transaksi"/);
+ assert.match(ui,/RupiahField label="Dana dalam Proses Reimbursement"/);
+ assert.match(rupiah,/type="text" inputMode="numeric"/);
+ assert.match(rupiah,/replace\(\/\\D\/g/);
+ assert.doesNotMatch(rupiah,/type="number"/);
 });
