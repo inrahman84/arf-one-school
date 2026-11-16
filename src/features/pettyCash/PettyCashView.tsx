@@ -57,7 +57,7 @@ export const PettyCashView:React.FC<{schools:School[]}>=({schools})=>{
  const [reimbursement,setReimbursement]=useState(0);const [editingId,setEditingId]=useState('');
  const [previewId,setPreviewId]=useState('');const [photoUrls,setPhotoUrls]=useState<Record<string,string>>({});
  const [photosLoading,setPhotosLoading]=useState(false);const [returnReason,setReturnReason]=useState('');
- const isTreasurer=['SCHOOL_TREASURER','SUPER_ADMIN'].includes(userProfile?.role||'') && (!userProfile?.role || userProfile.role!=='SUPER_ADMIN' || !userProfile.deletedAt);
+ const isTreasurer=['SCHOOL_TREASURER','SUPER_ADMIN'].includes(userProfile?.role||'');
  const school=allowed.find(s=>s.school_id===schoolId);
  useEffect(()=>{if(!allowed.some(s=>s.school_id===schoolId))setSchoolId(allowed[0]?.school_id||'');},[allowed,schoolId]);
  const refresh=async()=>{
