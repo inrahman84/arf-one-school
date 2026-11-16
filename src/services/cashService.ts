@@ -20,7 +20,7 @@ export interface CashReport {
 }
 export interface CashApprovalEvent {
   id:number;report_id:string;school_id:string;action:'SUBMIT'|'RESUBMIT'|'APPROVE'|'RETURN';
-  from_status:string;to_status:string;actor_id:string;actor_role:string;
+  from_status:string;to_status:string;actor_id:string;actor_role:string;actor_name:string;
   comment:string;occurred_at:string;
 }
 function unwrap<T>(data:T[]|null,error:any):T[] {
