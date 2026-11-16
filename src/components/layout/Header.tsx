@@ -44,6 +44,8 @@ export const Header: React.FC<HeaderProps> = ({ pageTitle, pageSubtitle, onDataR
     REGIONAL_LEAD: { label: 'Regional Lead', color: 'bg-indigo-800 text-white' },
     SCHOOL_PRINCIPAL: { label: 'Kepala Sekolah', color: 'bg-[#073b2d] text-white' },
     SCHOOL_OPERATOR: { label: 'Operator Sekolah', color: 'bg-slate-700 text-white' },
+    SCHOOL_TREASURER: { label: 'Bendahara Sekolah', color: 'bg-[#c89b55] text-white' },
+    ARF_HEAD_TU: { label: 'Kepala TU ARF', color: 'bg-[#3f6276] text-white' },
     HR_OFFICER: { label: 'HR Officer', color: 'bg-amber-700 text-white' },
     ASSET_OFFICER: { label: 'Asset Officer', color: 'bg-teal-700 text-white' }
   };

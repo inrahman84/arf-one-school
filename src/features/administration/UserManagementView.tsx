@@ -274,6 +274,8 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ schools,
             <option value="REGIONAL_LEAD">REGIONAL_LEAD</option>
             <option value="SCHOOL_PRINCIPAL">SCHOOL_PRINCIPAL</option>
             <option value="SCHOOL_OPERATOR">SCHOOL_OPERATOR</option>
+                     <option value="SCHOOL_TREASURER">SCHOOL_TREASURER</option>
+                     <option value="ARF_HEAD_TU">ARF_HEAD_TU</option>
             <option value="HR_OFFICER">HR_OFFICER</option>
             <option value="ASSET_OFFICER">ASSET_OFFICER</option>
           </select>
@@ -324,7 +326,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ schools,
                       </span>
                     </td>
                     <td className="py-3 px-4">
-                      {user.role === 'SUPER_ADMIN' || user.role === 'FOUNDATION_MANAGER' ? (
+                      {['SUPER_ADMIN','FOUNDATION_MANAGER','ARF_HEAD_TU'].includes(user.role) ? (
                         <span className="text-emerald-700 font-semibold">Semua Sekolah (Global)</span>
                       ) : (
                         <div className="text-[11px] text-gray-600">
@@ -503,6 +505,8 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ schools,
                     <option value="REGIONAL_LEAD">REGIONAL_LEAD (Koordinator Wilayah)</option>
                     <option value="SCHOOL_PRINCIPAL">SCHOOL_PRINCIPAL (Kepala Sekolah)</option>
                     <option value="SCHOOL_OPERATOR">SCHOOL_OPERATOR (Operator Sekolah)</option>
+                     <option value="SCHOOL_TREASURER">SCHOOL_TREASURER (Bendahara Sekolah)</option>
+                     <option value="ARF_HEAD_TU">ARF_HEAD_TU (Kepala TU Yayasan)</option>
                     <option value="HR_OFFICER">HR_OFFICER (Staf HR &amp; PTK)</option>
                     <option value="ASSET_OFFICER">ASSET_OFFICER (Staf Sarpras &amp; Aset)</option>
                   </select>
@@ -552,7 +556,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ schools,
                 </p>
               </div>
               {/* School Assignment Checklist */}
-              {inviteForm.role !== 'SUPER_ADMIN' && inviteForm.role !== 'FOUNDATION_MANAGER' && (
+              {!['SUPER_ADMIN','FOUNDATION_MANAGER','ARF_HEAD_TU'].includes(inviteForm.role) && (
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">
                     Sekolah yang Ditugaskan (Otorisasi Akses)
@@ -582,7 +586,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ schools,
                 </div>
               )}
 
-              {inviteForm.role !== 'SUPER_ADMIN' && inviteForm.role !== 'FOUNDATION_MANAGER' && (
+              {!['SUPER_ADMIN','FOUNDATION_MANAGER','ARF_HEAD_TU'].includes(inviteForm.role) && (
                 <div>
                   <label className="mb-1 block text-xs font-semibold text-gray-700">Regional yang Ditugaskan (Otorisasi Wilayah)</label>
                   <div className="max-h-28 space-y-1.5 overflow-y-auto rounded-lg border border-gray-200 bg-gray-50 p-3">
@@ -668,6 +672,8 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ schools,
                     <option value="REGIONAL_LEAD">REGIONAL_LEAD</option>
                     <option value="SCHOOL_PRINCIPAL">SCHOOL_PRINCIPAL</option>
                     <option value="SCHOOL_OPERATOR">SCHOOL_OPERATOR</option>
+                     <option value="SCHOOL_TREASURER">SCHOOL_TREASURER</option>
+                     <option value="ARF_HEAD_TU">ARF_HEAD_TU</option>
                     <option value="HR_OFFICER">HR_OFFICER</option>
                     <option value="ASSET_OFFICER">ASSET_OFFICER</option>
                   </select>
@@ -711,7 +717,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ schools,
                 </label>
               </div>
               {/* School Assignment Checklist */}
-              {editForm.role !== 'SUPER_ADMIN' && editForm.role !== 'FOUNDATION_MANAGER' && (
+              {!['SUPER_ADMIN','FOUNDATION_MANAGER','ARF_HEAD_TU'].includes(editForm.role) && (
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">
                     Sekolah yang Ditugaskan
@@ -741,7 +747,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ schools,
                 </div>
               )}
 
-              {editForm.role !== 'SUPER_ADMIN' && editForm.role !== 'FOUNDATION_MANAGER' && (
+              {!['SUPER_ADMIN','FOUNDATION_MANAGER','ARF_HEAD_TU'].includes(editForm.role) && (
                 <div>
                   <label className="mb-1 block text-xs font-semibold text-gray-700">Regional yang Ditugaskan (Otorisasi Wilayah)</label>
                   <div className="max-h-28 space-y-1.5 overflow-y-auto rounded-lg border border-gray-200 bg-gray-50 p-3">
