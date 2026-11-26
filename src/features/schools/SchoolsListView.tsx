@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { DirectNumberInput } from '../../components/ui/DirectNumberInput';
 import {
   Plus,
   Search,
@@ -572,10 +573,10 @@ export const SchoolsListView: React.FC<SchoolsListViewProps> = ({
 
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Kapasitas Daya Tampung (Siswa)</label>
-                  <input
-                    type="number"
+                  <DirectNumberInput
+                    min={0}
                     value={formData.school_capacity}
-                    onChange={(e) => setFormData({ ...formData, school_capacity: Number(e.target.value) })}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, school_capacity: value }))}
                     className="w-full text-xs p-2 rounded-lg border border-gray-300"
                   />
                 </div>
