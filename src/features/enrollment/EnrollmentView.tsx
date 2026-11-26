@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { DirectNumberInput } from '../../components/ui/DirectNumberInput';
 import {
   Plus,
   Users,
@@ -684,11 +685,10 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({
 
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Kapasitas Maksimal *</label>
-                  <input
-                    type="number"
-                    min="1"
+                  <DirectNumberInput
+                    min={1}
                     value={formData.class_capacity}
-                    onChange={(e) => setFormData({ ...formData, class_capacity: Number(e.target.value) })}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, class_capacity: value }))}
                     className="w-full text-xs p-2 rounded-lg border border-gray-300"
                     required
                   />

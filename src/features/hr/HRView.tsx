@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { DirectNumberInput } from '../../components/ui/DirectNumberInput';
 import {
   Plus,
   Search,
@@ -612,11 +613,10 @@ export const HRView: React.FC<HRViewProps> = ({
 
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Beban Mengajar Mingguan (Jam)</label>
-                  <input
-                    type="number"
-                    min="0"
+                  <DirectNumberInput
+                    min={0}
                     value={formData.weekly_teaching_hours}
-                    onChange={(e) => setFormData({ ...formData, weekly_teaching_hours: Number(e.target.value) })}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, weekly_teaching_hours: value }))}
                     className="w-full text-xs p-2 rounded-lg border border-gray-300"
                   />
                 </div>

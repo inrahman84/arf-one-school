@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { DirectNumberInput } from '../../components/ui/DirectNumberInput';
 import {
   Plus,
   Search,
@@ -864,7 +865,7 @@ const accessibleSchools = schools.filter(s => hasSchoolAccess(s.school_id));
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Jumlah Unit *</label>
-                  <input type="number" min="1" max="1" readOnly value={formData.quantity}
+                  <input type="text" inputMode="numeric" readOnly value={formData.quantity}
                     className="w-full text-xs p-2 rounded-lg border border-gray-300 bg-gray-50" required/>
                 </div>
                 {formData.registration_type==='BUNDLE' && <div className="sm:col-span-2">
@@ -934,11 +935,10 @@ const accessibleSchools = schools.filter(s => hasSchoolAccess(s.school_id));
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Harga Satuan Perolehan (Rp)</label>
-                  <input
-                    type="number"
-                    min="0"
+                  <DirectNumberInput
+                    min={0} currency
                     value={formData.acquisition_unit_value}
-                    onChange={(e) => setFormData({ ...formData, acquisition_unit_value: Number(e.target.value) })}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, acquisition_unit_value: value }))}
                     className="w-full text-xs p-2 rounded-lg border border-gray-300"
                   />
                 </div>
