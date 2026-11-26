@@ -34,7 +34,14 @@ export const DirectNumberInput: React.FC<DirectNumberInputProps> = ({
     onFocus={event => {
       setDraft(validValue === 0 ? '' : String(validValue));
       setFocused(true);
-      event.currentTarget.select();
+      const input = event.currentTarget;
+      input.select();
+      // React updates the displayed value from e.g. 125.000 to 125000 on focus.
+      // Select again after that render, so the first typed digit replaces the
+      // old amount rather than being appended to it.
+      requestAnimationFrame(() => {
+        if (document.activeElement === input) input.select();
+      });
       onFocus?.(event);
     }}
     onChange={event => {
