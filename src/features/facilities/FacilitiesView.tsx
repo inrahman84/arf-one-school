@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { DirectNumberInput } from '../../components/ui/DirectNumberInput';
 import {
   Plus,
   Search,
@@ -589,22 +590,20 @@ export const FacilitiesView: React.FC<FacilitiesViewProps> = ({
 
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Luas Bangunan (m&sup2;)</label>
-                  <input
-                    type="number"
-                    min="0"
+                  <DirectNumberInput
+                    min={0} allowDecimal
                     value={formData.facility_area_m2}
-                    onChange={(e) => setFormData({ ...formData, facility_area_m2: Number(e.target.value) })}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, facility_area_m2: value }))}
                     className="w-full text-xs p-2 rounded-lg border border-gray-300"
                   />
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Kapasitas Maksimal (Orang)</label>
-                  <input
-                    type="number"
-                    min="0"
+                  <DirectNumberInput
+                    min={0}
                     value={formData.facility_capacity}
-                    onChange={(e) => setFormData({ ...formData, facility_capacity: Number(e.target.value) })}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, facility_capacity: value }))}
                     className="w-full text-xs p-2 rounded-lg border border-gray-300"
                   />
                 </div>
@@ -686,11 +685,10 @@ export const FacilitiesView: React.FC<FacilitiesViewProps> = ({
 
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 mb-1">Estimasi Biaya Perbaikan (Rp)</label>
-                      <input
-                        type="number"
-                        min="0"
+                      <DirectNumberInput
+                        min={0} currency
                         value={formData.estimated_repair_cost}
-                        onChange={(e) => setFormData({ ...formData, estimated_repair_cost: Number(e.target.value) })}
+                        onValueChange={(value) => setFormData(prev => ({ ...prev, estimated_repair_cost: value }))}
                         className="w-full text-xs p-2 rounded-lg border border-gray-300"
                       />
                     </div>
