@@ -49,7 +49,8 @@ test('Shared number field is spinner-free and selects existing content on focus'
   const source = readFileSync(new URL('../src/components/ui/DirectNumberInput.tsx', import.meta.url), 'utf8');
   assert.match(source, /type="text"/);
   assert.match(source, /inputMode=\{allowDecimal \? 'decimal' : 'numeric'\}/);
-  assert.match(source, /event.currentTarget.select\(\)/);
+  assert.match(source, /input.select\(\)/);
+  assert.match(source, /requestAnimationFrame\(/);
   assert.match(source, /onValueChange\(parsed\)/);
   assert.doesNotMatch(source, /type="number"/);
 });
